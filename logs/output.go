@@ -62,9 +62,21 @@ const (
 	colorMagenta
 	colorCyan
 	colorWhite
+)
 
-	colorBold     = 1
-	colorDarkGray = 90
+const (
+	colorBrightBlack = iota + 90
+	colorBrightRed
+	colorBrightGreen
+	colorBrightYellow
+	colorBrightBlue
+	colorBrightMagenta
+	colorBrightCyan
+	colorBrightWhite
+)
+
+const (
+	styleBold = 1
 )
 
 func colorize(s interface{}, c int) string {
@@ -78,19 +90,19 @@ func (*stdout) Write(p []byte) (int, error) {
 
 	datatime, _ := jsonparser.GetString(p, "datatime")
 	level, _ := jsonparser.GetString(p, "level")
-	eventID, _, _, _ := jsonparser.Get(p, "fields", "eventId")
+	// eventID, _, _, _ := jsonparser.Get(p, "fields", "eventId")
 	msg, _ := jsonparser.GetString(p, "msg")
 	file, _ := jsonparser.GetString(p, "file")
 	line := file[strings.LastIndex(file, "/")+1:]
 
 	level = strings.ToUpper(level)
-	buf.WriteString(colorize(datatime, colorDarkGray))
+	buf.WriteString(colorize(datatime, colorBrightBlack))
 	buf.WriteString(" ")
-	buf.WriteString(colorize(level, getLevelColor(level)))
+	buf.WriteString(colorize(getTitle(level), getLevelColor(level)))
 	buf.WriteString(" ")
-	buf.WriteString("[")
-	buf.Write([]byte(colorize(string(eventID), colorGreen)))
-	buf.WriteString("]")
+	// buf.WriteString("[")
+	// buf.Write([]byte(colorize(string(eventID), colorGreen)))
+	// buf.WriteString("]")
 	buf.WriteString(" ")
 	buf.WriteString(msg)
 	buf.WriteString(" ")
@@ -132,6 +144,14 @@ func (*stdout) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func getTitle(level string) string {
+	if level == "WARNING" {
+		level = "WARN"
+	}
+	span := 6 - len(level)
+	return " " + level + strings.Repeat(" ", span)
+}
+
 func getLevelColor(level string) int {
 	switch level {
 	case "DEBUG":
@@ -139,9 +159,11 @@ func getLevelColor(level string) int {
 	case "INFO":
 		return colorGreen
 	case "ERROR", "PANIC":
-		return colorRed
+		return colorRed + 10
 	case "WARNING":
-		return colorMagenta
+		return colorYellow
+	case "FATAL":
+		return colorBrightRed
 	default:
 		return colorBlue
 	}

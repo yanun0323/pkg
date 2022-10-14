@@ -12,7 +12,6 @@ func TestErrStack(t *testing.T) {
 }
 
 func getError() error {
-
 	return errors.WithStack(errors.New("test error"))
 }
 

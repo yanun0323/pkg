@@ -26,8 +26,12 @@ func TestLogs_WithEventID(t *testing.T) {
 	log := logs.New("logs", 0).WithEventID("fc0d40ae-1801-4bda-9c3b-e1b6956b59b0")
 
 	log.Info("info")
+	log.Info("info")
+	log.Warn("warn")
 	log.Warn("warn")
 	log.Error("error")
+	log.Error("error")
+	log.Fatal("fatal")
 	log.Fatal("fatal")
 }
 
