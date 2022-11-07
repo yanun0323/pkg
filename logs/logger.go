@@ -17,14 +17,11 @@ Get logger from context. if there's no logger in context, it will create one.
 */
 func Get(ctx context.Context) *Logger {
 	val := ctx.Value(logKey{})
-	if val == nil {
-		return _DefaultLogger
-	}
 	if logger, ok := val.(*Logger); ok {
 		return logger
 	}
 	if _DefaultLogger == nil {
-		return NewLogger("unknown", 2, "stdout")
+		return NewLogger("default", 2, "stdout")
 	}
 	return _DefaultLogger
 }

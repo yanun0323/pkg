@@ -1,10 +1,16 @@
 package test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/yanun0323/pkg/logs"
 )
+
+func TestGet(t *testing.T) {
+	log := logs.Get(context.Background())
+	log.Info("Test")
+}
 
 func TestLogs(t *testing.T) {
 	log1 := logs.New("logs", 0)
