@@ -35,8 +35,11 @@ func Init(cfgPath, cfgName string, dump bool) error {
 	viper.AddConfigPath(cfgPath)
 	viper.AddConfigPath("./config")
 	configName := os.Getenv("CONFIG_NAME")
-	if configName != "" {
+	if len(configName) == 0 {
 		cfgName = configName
+	}
+	if len(cfgName) == 0 {
+		cfgName = "config"
 	}
 
 	viper.SetConfigName(cfgName)
