@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _DefaultLogger *Logger
+var _defaultLogger *Logger
 
 type logKey struct{}
 
@@ -20,10 +20,10 @@ func Get(ctx context.Context) *Logger {
 	if logger, ok := val.(*Logger); ok {
 		return logger
 	}
-	if _DefaultLogger == nil {
+	if _defaultLogger == nil {
 		return NewLogger("default", 2, "stdout")
 	}
-	return _DefaultLogger
+	return _defaultLogger
 }
 
 /*
@@ -76,7 +76,7 @@ func NewLogger(app string, level uint8, outs string) *Logger {
 		TimestampFormat: "2006/01/02 15:04:05",
 		DataKey:         "fields",
 		FieldMap: logrus.FieldMap{
-			logrus.FieldKeyTime: "datatime",
+			logrus.FieldKeyTime: "datetime",
 		},
 	})
 
@@ -86,8 +86,8 @@ func NewLogger(app string, level uint8, outs string) *Logger {
 	log := &Logger{
 		Entry: logger.WithField("app", app),
 	}
-	if _DefaultLogger == nil {
-		_DefaultLogger = log
+	if _defaultLogger == nil {
+		_defaultLogger = log
 	}
 	return log
 }
