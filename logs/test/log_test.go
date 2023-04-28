@@ -24,8 +24,6 @@ func TestLogs(t *testing.T) {
 func TestMap(t *testing.T) {
 	log1 := logs.New("logs", 0)
 	log1.WithField("test", map[string]interface{}{"test": true}).Info("acccess")
-	log1.WithField("slack.notify", true).Info("acccess")
-	log1.WithField("slack.channelID", 1234234).Info("acccess")
 }
 
 func TestLogs_WithEventID(t *testing.T) {
@@ -38,15 +36,6 @@ func TestLogs_WithEventID(t *testing.T) {
 	log.Error("error")
 	log.Error("error")
 	log.Fatal("fatal")
-	log.Fatal("fatal")
-}
-
-func TestLogs_WithPair(t *testing.T) {
-	log := logs.New("logs", 4).WithPair("bito", "eth")
-
-	log.Info("info")
-	log.Warn("warn")
-	log.WithEventID("fc0d40ae-1801-4bda-9c3b-e1b6956b59b0").Error("error")
 	log.Fatal("fatal")
 }
 

@@ -3,7 +3,6 @@ package logs
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -83,8 +82,12 @@ func NewLogger(app string, level uint8, outs string) *Logger {
 	var out output
 	logger.SetOutput(out.new(outs, app))
 
+	if len(app) != 0 {
+		logger.WithField("app", app)
+	}
+
 	log := &Logger{
-		Entry: logger.WithField("app", app),
+		Entry: logger.WithContext(nil),
 	}
 	if _defaultLogger == nil {
 		_defaultLogger = log
@@ -108,24 +111,9 @@ func (l *Logger) WithSource(source int) *Logger {
 	}
 }
 
-func (l *Logger) WithSlackNotify() *Logger {
-	return &Logger{
-		Entry: l.Entry.WithField("slack.notify", true),
-	}
-}
-
 func (l *Logger) WithFunc(function string) *Logger {
 	return &Logger{
 		Entry: l.Entry.WithField("func", function),
-	}
-}
-
-func (l *Logger) WithPair(base, quote interface{}) *Logger {
-	base = strings.ToUpper(base.(string))
-	quote = strings.ToUpper(quote.(string))
-
-	return &Logger{
-		Entry: l.Entry.WithField("base", base).WithField("quote", quote).WithField("pair", fmt.Sprintf("%s_%s", base, quote)),
 	}
 }
 
@@ -164,17 +152,3 @@ func (l *Logger) Attach(ctx context.Context) (*Logger, context.Context) {
 			Entry: l.Entry,
 		})
 }
-
-// func Cause(err error) error {
-// 	type causer interface {
-// 		Cause() error
-// 	}
-
-// 	cause, ok := err.(causer)
-// 	if !ok {
-// 		fmt.Println(err)
-// 		return err
-// 	}
-// 	err = cause.Cause()
-// 	return err
-// }
