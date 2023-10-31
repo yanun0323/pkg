@@ -38,7 +38,7 @@ func Init(cfgPath, cfgName string, dump bool) error {
 	if len(configName) != 0 {
 		cfgName = configName
 	}
-	if len(cfgName) != 0 {
+	if len(cfgName) == 0 {
 		cfgName = "config"
 	}
 
@@ -54,7 +54,7 @@ func Init(cfgPath, cfgName string, dump bool) error {
 	if dump {
 		Dump()
 	}
-
+	[getBasicInfo] 請檢查網路連線, decode json data error, err: keyNotFound(CodingKeys(stringValue: "notice_count", intValue: nil), Swift.DecodingError.Context(codingPath: [CodingKeys(stringValue: "data", intValue: nil)], debugDescription: "No value associated with key CodingKeys(stringValue: \"notice_count\", intValue: nil) (\"notice_count\").", underlyingError: nil))
 	return nil
 }
 
