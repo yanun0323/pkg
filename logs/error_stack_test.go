@@ -9,6 +9,7 @@ import (
 
 func TestErrStack(t *testing.T) {
 	t.Log(GetStack(getError()))
+	t.Log(GetStack(getNormalErr()))
 }
 
 func getError() error {

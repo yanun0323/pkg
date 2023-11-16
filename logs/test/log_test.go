@@ -23,11 +23,11 @@ func TestLogs(t *testing.T) {
 
 func TestMap(t *testing.T) {
 	log1 := logs.New("logs", 0)
-	log1.WithField("test", map[string]interface{}{"test": true}).Info("acccess")
+	log1.WithField("test", map[string]interface{}{"test": true}).Info("access")
 }
 
-func TestLogs_WithEventID(t *testing.T) {
-	log := logs.New("logs", 0).WithEventID("fc0d40ae-1801-4bda-9c3b-e1b6956b59b0")
+func TestLogs_WithFunc(t *testing.T) {
+	log := logs.New("logs", 0).WithFunc("WithFunc")
 
 	log.Info("info")
 	log.Info("info")
@@ -40,10 +40,10 @@ func TestLogs_WithEventID(t *testing.T) {
 }
 
 func TestLogs_WithField(t *testing.T) {
-	log := logs.New("logs", 0).WithField("haha", "foo....")
+	log := logs.New("logs", 0).WithField("hello", "foo....")
 
 	log.Info("info...")
-	log.WithEventID("im eventid").Info("with event id")
+	log.WithField("user_id", "im user").Info("with user id")
 }
 
 func TestLogs_WithFields(t *testing.T) {
@@ -53,5 +53,5 @@ func TestLogs_WithFields(t *testing.T) {
 	})
 
 	log.Info("info...")
-	log.WithEventID("im eventid").Info("with event id")
+	log.WithField("user_id", "im user").Info("with user id")
 }

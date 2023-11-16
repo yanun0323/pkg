@@ -11,7 +11,7 @@ import (
 )
 
 type output struct {
-	app     string
+	service string
 	writers []io.Writer
 }
 
@@ -23,7 +23,7 @@ const (
 	errorMsgBegin = "\n"
 )
 
-func (o *output) new(outs, app string) io.Writer {
+func (o *output) new(outs, service string) io.Writer {
 	writers := []io.Writer{}
 
 	if strings.Contains(outs, "stdout") {
@@ -31,7 +31,7 @@ func (o *output) new(outs, app string) io.Writer {
 	}
 
 	if strings.Contains(outs, "file") {
-		w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", GetAbsPath(app, "log"), fmt.Sprintf("/%s", app)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", GetAbsPath(service, "log"), fmt.Sprintf("/%s", service)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 		writers = append(writers, &file{
 			writer: w,
@@ -39,6 +39,7 @@ func (o *output) new(outs, app string) io.Writer {
 	}
 
 	return &output{
+		service: service,
 		writers: writers,
 	}
 }
@@ -75,10 +76,6 @@ const (
 	colorBrightWhite
 )
 
-const (
-	styleBold = 1
-)
-
 func colorize(s interface{}, c int) string {
 	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }
@@ -88,21 +85,19 @@ type stdout struct{}
 func (*stdout) Write(p []byte) (int, error) {
 	buf := bytes.Buffer{}
 
-	datatime, _ := jsonparser.GetString(p, "datatime")
+	timestamp, _ := jsonparser.GetString(p, "timestamp")
 	level, _ := jsonparser.GetString(p, "level")
-	// eventID, _, _, _ := jsonparser.Get(p, "fields", "eventId")
+
 	msg, _ := jsonparser.GetString(p, "msg")
 	file, _ := jsonparser.GetString(p, "file")
 	line := file[strings.LastIndex(file, "/")+1:]
 
 	level = strings.ToUpper(level)
-	buf.WriteString(colorize(datatime, colorBrightBlack))
+	buf.WriteString(colorize(timestamp, colorBrightBlack))
 	buf.WriteString(" ")
 	buf.WriteString(colorize(getTitle(level), getLevelColor(level)))
 	buf.WriteString(" ")
-	// buf.WriteString("[")
-	// buf.Write([]byte(colorize(string(eventID), colorGreen)))
-	// buf.WriteString("]")
+
 	buf.WriteString(" ")
 	buf.WriteString(msg)
 	buf.WriteString(" ")
