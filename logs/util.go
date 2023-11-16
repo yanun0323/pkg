@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func GetAbsPath(root string, dirs ...string) string {
+func getAbsPath(root string, dirs ...string) string {
 	dir, _ := os.Getwd()
 	path := dir
 

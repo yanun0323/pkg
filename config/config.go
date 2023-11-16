@@ -44,13 +44,13 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 			return
 		}
 		if dump {
-			Dump()
+			dumpConfig()
 		}
 	})
 	return err
 }
 
-func Dump() {
+func dumpConfig() {
 	keys := viper.AllKeys()
 	sort.Strings(keys)
 	for _, key := range keys {

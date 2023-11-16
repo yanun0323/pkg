@@ -31,7 +31,7 @@ func (o *output) new(outs, service string) io.Writer {
 	}
 
 	if strings.Contains(outs, "file") {
-		w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", GetAbsPath(service, "log"), fmt.Sprintf("/%s", service)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", getAbsPath(service, "log"), fmt.Sprintf("/%s", service)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
 		writers = append(writers, &file{
 			writer: w,

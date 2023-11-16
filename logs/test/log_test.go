@@ -30,13 +30,15 @@ func TestLogs_WithFunc(t *testing.T) {
 	log := logs.New("logs", 0).WithFunc("WithFunc")
 
 	log.Info("info")
-	log.Info("info")
-	log.Warn("warn")
 	log.Warn("warn")
 	log.Error("error")
-	log.Error("error")
-	log.Fatal("fatal")
-	log.Fatal("fatal")
+}
+
+func TestLogs_Fatal(t *testing.T) {
+	log := logs.New("logs", 0)
+	t.Cleanup(func() {
+		log.Fatal("fatal")
+	})
 }
 
 func TestLogs_WithField(t *testing.T) {

@@ -18,8 +18,8 @@ func (level Level) String() string {
 	}
 }
 
-// ParseLevel takes a string level and returns the Logrus log level constant.
-func ParseLevel(lvl string) (Level, error) {
+// NewLevel takes a string level and returns the Logrus log level constant.
+func NewLevel(lvl string) (Level, error) {
 	switch strings.ToLower(lvl) {
 	case "panic":
 		return PanicLevel, nil
@@ -43,7 +43,7 @@ func ParseLevel(lvl string) (Level, error) {
 
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (level *Level) UnmarshalText(text []byte) error {
-	l, err := ParseLevel(string(text))
+	l, err := NewLevel(string(text))
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (level Level) Logrus() logrus.Level {
 }
 
 // A constant exposing all logging levels
-var AllLevels = []Level{
+var Levels = []Level{
 	PanicLevel,
 	FatalLevel,
 	ErrorLevel,

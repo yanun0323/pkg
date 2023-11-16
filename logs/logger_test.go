@@ -9,7 +9,7 @@ import (
 
 func TestWithFields(t *testing.T) {
 	wg := sync.WaitGroup{}
-	l := NewLogger("test", 0, "stdout")
+	l := newWithOutput("test", 0, "stdout")
 	wg.Add(100)
 	for i := 1; i <= 100; i++ {
 		go func(i int) {
