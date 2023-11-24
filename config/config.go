@@ -9,8 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spf13/viper"
 	"github.com/yanun0323/pkg/logs"
+
+	"github.com/spf13/viper"
 )
 
 /*
@@ -46,7 +47,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 		if dump {
 			dumpConfig()
 		}
-	})
+	})()
 	return err
 }
 
