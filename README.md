@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-    l := logs.New("example_service", 0)
+    l := logs.New("example_service", logs.LevelInfo)
 
     err := config.Init("config", true, "../config", "../../config")
     if err != nil {
