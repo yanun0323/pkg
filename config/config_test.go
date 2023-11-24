@@ -7,7 +7,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	err := Init("config", true)
+	err := Init("config_test", true)
 	if err != nil {
 		t.Fatal(err)
 	}

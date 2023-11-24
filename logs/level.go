@@ -1,130 +1,84 @@
 package logs
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 )
 
-type Level uint16
+type Level string
 
 // Convert the Level to a string. E.g. PanicLevel becomes "panic".
 func (level Level) String() string {
-	if b, err := level.MarshalText(); err == nil {
-		return string(b)
-	} else {
-		return "unknown"
-	}
+	return string(level)
 }
 
-// NewLevel takes a string level and returns the Logrus log level constant.
-func NewLevel(lvl string) (Level, error) {
+// NewLevel takes a string level and returns the Logs log level constant.
+//
+// return panic level when there's no matched string
+//
+// allowed args: "panic", "fatal", "error", "warn", "info", "debug", "trace"
+func NewLevel(lvl string) Level {
 	switch strings.ToLower(lvl) {
 	case "panic":
-		return PanicLevel, nil
+		return LevelPanic
 	case "fatal":
-		return FatalLevel, nil
+		return LevelFatal
 	case "error":
-		return ErrorLevel, nil
+		return LevelError
 	case "warn", "warning":
-		return WarnLevel, nil
+		return LevelWarn
 	case "info":
-		return InfoLevel, nil
+		return LevelInfo
 	case "debug":
-		return DebugLevel, nil
+		return LevelDebug
 	case "trace":
-		return TraceLevel, nil
+		return LevelTrace
 	}
 
-	var l Level
-	return l, fmt.Errorf("not a valid logrus Level: %q", lvl)
+	return "panic"
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (level *Level) UnmarshalText(text []byte) error {
-	l, err := NewLevel(string(text))
-	if err != nil {
-		return err
-	}
-
-	*level = l
-
-	return nil
-}
-
-func (level Level) MarshalText() ([]byte, error) {
+func (level Level) logrus() logrus.Level {
 	switch level {
-	case TraceLevel:
-		return []byte("trace"), nil
-	case DebugLevel:
-		return []byte("debug"), nil
-	case InfoLevel:
-		return []byte("info"), nil
-	case WarnLevel:
-		return []byte("warning"), nil
-	case ErrorLevel:
-		return []byte("error"), nil
-	case FatalLevel:
-		return []byte("fatal"), nil
-	case PanicLevel:
-		return []byte("panic"), nil
-	}
-
-	return nil, fmt.Errorf("not a valid logrus level %d", level)
-}
-
-func (level Level) Logrus() logrus.Level {
-	switch level {
-	case TraceLevel:
+	case LevelTrace:
 		return logrus.TraceLevel
-	case DebugLevel:
+	case LevelDebug:
 		return logrus.DebugLevel
-	case InfoLevel:
+	case LevelInfo:
 		return logrus.InfoLevel
-	case WarnLevel:
+	case LevelWarn:
 		return logrus.WarnLevel
-	case ErrorLevel:
+	case LevelError:
 		return logrus.ErrorLevel
-	case FatalLevel:
+	case LevelFatal:
 		return logrus.FatalLevel
-	case PanicLevel:
+	case LevelPanic:
 		return logrus.PanicLevel
 	}
 
 	return logrus.PanicLevel
 }
 
-// A constant exposing all logging levels
-var Levels = []Level{
-	PanicLevel,
-	FatalLevel,
-	ErrorLevel,
-	WarnLevel,
-	InfoLevel,
-	DebugLevel,
-	TraceLevel,
-}
-
 // These are the different logging levels. You can set the logging level to log
 // on your instance of logger, obtained with `logrus.New()`.
 const (
-	// PanicLevel level, highest level of severity. Logs and then calls panic with the
+	// LevelPanic level, highest level of severity. Logs and then calls panic with the
 	// message passed to Debug, Info, ...
-	PanicLevel Level = iota
-	// FatalLevel level. Logs and then calls `logger.Exit(1)`. It will exit even if the
+	LevelPanic Level = "panic"
+	// LevelFatal level. Logs and then calls `logger.Exit(1)`. It will exit even if the
 	// logging level is set to Panic.
-	FatalLevel
-	// ErrorLevel level. Logs. Used for errors that should definitely be noted.
+	LevelFatal Level = "fatal"
+	// LevelError level. Logs. Used for errors that should definitely be noted.
 	// Commonly used for hooks to send errors to an error tracking service.
-	ErrorLevel
-	// WarnLevel level. Non-critical entries that deserve eyes.
-	WarnLevel
-	// InfoLevel level. General operational entries about what's going on inside the
+	LevelError Level = "error"
+	// LevelWarn level. Non-critical entries that deserve eyes.
+	LevelWarn Level = "warn"
+	// LevelInfo level. General operational entries about what's going on inside the
 	// application.
-	InfoLevel
-	// DebugLevel level. Usually only enabled when debugging. Very verbose logging.
-	DebugLevel
-	// TraceLevel level. Designates finer-grained informational events than the Debug.
-	TraceLevel
+	LevelInfo Level = "info"
+	// LevelDebug level. Usually only enabled when debugging. Very verbose logging.
+	LevelDebug Level = "debug"
+	// LevelTrace level. Designates finer-grained informational events than the Debug.
+	LevelTrace Level = "trace"
 )

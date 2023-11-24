@@ -14,7 +14,7 @@ var _defaultLogger *logger
 type logKey struct{}
 
 /*
-Get logger from context. if there's no logger in context, it will create one.
+Get logger from context. if there's no logger in context, it will create one with panic level.
 */
 func Get(ctx context.Context) Logger {
 	val := ctx.Value(logKey{})
@@ -22,30 +22,21 @@ func Get(ctx context.Context) Logger {
 		return logger
 	}
 	if _defaultLogger == nil {
-		return newWithOutput("default", 2, "stdout")
+		return newWithOutput("default", LevelPanic, "stdout")
 	}
 	return _defaultLogger
 }
 
 /*
 Init a new logger for output.
-
-	# level
-	  0 = "panic"
-	  1 = "fatal"
-	  2 = "error"
-	  3 = "warn"
-	  4 = "info"
-	  5 = "debug"
-	  6 = "trace"
 */
-func New(service string, level uint16) Logger {
+func New(service string, level Level) Logger {
 	return newWithOutput(service, level, "stdout")
 }
 
-func newWithOutput(service string, level uint16, outs string) Logger {
+func newWithOutput(service string, level Level, outs string) Logger {
 	l := logrus.New()
-	l.SetLevel(Level(level).Logrus())
+	l.SetLevel(level.logrus())
 	l.SetNoLock()
 	l.SetReportCaller(true)
 	l.SetFormatter(&logrus.JSONFormatter{
@@ -138,15 +129,15 @@ func (l *logger) Infoln(args ...interface{}) {
 }
 
 func (l *logger) Log(level Level, args ...interface{}) {
-	l.entry.Log(level.Logrus(), args...)
+	l.entry.Log(level.logrus(), args...)
 }
 
 func (l *logger) Logf(level Level, format string, args ...interface{}) {
-	l.entry.Logf(level.Logrus(), format, args...)
+	l.entry.Logf(level.logrus(), format, args...)
 }
 
 func (l *logger) Logln(level Level, args ...interface{}) {
-	l.entry.Logln(level.Logrus(), args...)
+	l.entry.Logln(level.logrus(), args...)
 }
 
 func (l *logger) Panic(args ...interface{}) {
@@ -252,7 +243,7 @@ func (l *logger) Writer() *io.PipeWriter {
 }
 
 func (l *logger) WriterLevel(level Level) *io.PipeWriter {
-	return l.entry.WriterLevel(level.Logrus())
+	return l.entry.WriterLevel(level.logrus())
 }
 
 func (l *logger) WithFunc(function string) *logger {

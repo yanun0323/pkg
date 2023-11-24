@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -11,6 +9,7 @@ import (
 
 	"github.com/yanun0323/pkg/logs"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -20,19 +19,28 @@ Initial the config from config.yaml
 	config.Init("config", true, "../config", "../../config")
 */
 func Init(cfgName string, dump bool, relativePaths ...string) error {
-	var err error
+	var (
+		err error
+		log logs.Logger
+	)
+
+	if dump {
+		log = logs.New("config", logs.LevelInfo)
+	}
+
 	sync.OnceFunc(func() {
-		_, f, _, _ := runtime.Caller(0)
+		_, f, _, _ := runtime.Caller(1)
 		for _, p := range relativePaths {
-			viper.AddConfigPath(filepath.Join(filepath.Dir(f), p))
+			path := filepath.Join(filepath.Dir(f), p)
+			viper.AddConfigPath(path)
+			if dump {
+				log.Info("config path:", path)
+			}
 		}
 		viper.AddConfigPath(".")
-		configName := os.Getenv("CONFIG_NAME")
-		if len(configName) != 0 {
-			cfgName = configName
-		}
 		if len(cfgName) == 0 {
-			cfgName = "config"
+			err = errors.New("empty config name")
+			return
 		}
 
 		viper.SetConfigName(cfgName)
@@ -42,22 +50,23 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 
 		err = viper.ReadInConfig()
 		if err != nil {
+			err = errors.Wrap(err, "read in config")
 			return
 		}
 		if dump {
-			dumpConfig()
+			dumpConfig(log)
 		}
 	})()
 	return err
 }
 
-func dumpConfig() {
+func dumpConfig(log logs.Logger) {
 	keys := viper.AllKeys()
 	sort.Strings(keys)
 	for _, key := range keys {
 		if strings.Contains(key, "password") || strings.Contains(key, "secret") || strings.Contains(key, "key") || strings.Contains(key, "pass") || strings.Contains(key, "pem") {
 			continue
 		}
-		logs.New("config", 0).Info(fmt.Sprintf("%s: %+v\n", key, viper.Get(key)))
+		log.Info(key, ":", viper.Get(key))
 	}
 }
