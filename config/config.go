@@ -39,7 +39,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 			path := filepath.Join(dir, p)
 			viper.AddConfigPath(path)
 			if dump {
-				log.Info("config path:", path)
+				log.Info("config path: ", path)
 			}
 		}
 		viper.AddConfigPath(".")
@@ -72,6 +72,6 @@ func dumpConfig(log logs.Logger) {
 		if strings.Contains(key, "password") || strings.Contains(key, "secret") || strings.Contains(key, "key") || strings.Contains(key, "pass") || strings.Contains(key, "pem") {
 			continue
 		}
-		log.Info(key, ":", viper.Get(key))
+		log.Info(key, ": ", viper.Get(key))
 	}
 }
