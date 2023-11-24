@@ -1,8 +1,8 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -14,12 +14,13 @@ import (
 )
 
 /*
-Initial the config from config.yaml
+Init initial the config from yaml file, and find file from paths relative to where the entry func.
 
 	config.Init("config", true, "../config", "../../config")
 */
 func Init(cfgName string, dump bool, relativePaths ...string) error {
 	var (
+		dir string
 		err error
 		log logs.Logger
 	)
@@ -29,9 +30,13 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	}
 
 	sync.OnceFunc(func() {
-		_, f, _, _ := runtime.Caller(1)
+		dir, err = os.Getwd()
+		if err != nil {
+			err = errors.Wrap(err, "get wd")
+			return
+		}
 		for _, p := range relativePaths {
-			path := filepath.Join(filepath.Dir(f), p)
+			path := filepath.Join(dir, p)
 			viper.AddConfigPath(path)
 			if dump {
 				log.Info("config path:", path)
