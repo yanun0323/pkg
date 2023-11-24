@@ -2,11 +2,11 @@
 PKG is an useful develop package collection for golang.
 
 ## Requirements
-Go 1.21 or higher
+#### _Go 1.21 or higher_
 
 ## Feature
-- Config provide config function to initializes the config yaml.
-- Logger provide logger to print/output the log. 
+- `Config` provides init function to initialize the config yaml.
+- `Logger` provides logger to print/output the log. 
 
 ## Usage
 ```go
