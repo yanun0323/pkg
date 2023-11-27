@@ -9,33 +9,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _defaultLogger *logger
+var _defaultLogger Logger
 
 type logKey struct{}
 
-// Get gets the logger from context. if there's no logger in context, it will create a new logger with panic level.
+// Get gets the logger from context. if there's no logger in context, it will create a new logger with 'info' level.
 func Get(ctx context.Context) Logger {
 	val := ctx.Value(logKey{})
-	if logger, ok := val.(*logger); ok {
+	if logger, ok := val.(Logger); ok {
 		return logger
 	}
 	if _defaultLogger == nil {
-		return newWithOutput("default", LevelPanic, "stdout")
+		return newWithOutput(LevelInfo)
 	}
 	return _defaultLogger
 }
 
-// New initializes a new logger.
-func New(service string, level Level) Logger {
-	return newWithOutput(service, level, "stdout")
+// New initializes a new logger with level. Use 'info' level when inputs empty.
+func New(level ...Level) Logger {
+	if len(level) == 0 {
+		newWithOutput(LevelInfo)
+	}
+	return newWithOutput(level[0])
 }
 
-// New initializes a new logger with attaching to context.
-func NewWithContext(ctx context.Context, service string, level Level) (context.Context, Logger) {
-	return newWithOutput(service, level, "stdout").Attach(ctx)
-}
-
-func newWithOutput(service string, level Level, outs string) Logger {
+func newWithOutput(level Level) Logger {
 	l := logrus.New()
 	l.SetLevel(level.logrus())
 	l.SetNoLock()
@@ -48,12 +46,8 @@ func newWithOutput(service string, level Level, outs string) Logger {
 		},
 	})
 
-	var out output
-	l.SetOutput(out.new(outs, service))
-
-	if len(service) != 0 {
-		l.WithField("service", service)
-	}
+	// var out output
+	// l.SetOutput(out.new(outs, service))
 
 	log := &logger{
 		entry: l.WithContext(context.Background()),

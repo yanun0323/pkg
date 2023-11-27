@@ -15,8 +15,8 @@ func TestGet(t *testing.T) {
 }
 
 func TestLogs(t *testing.T) {
-	log1 := logs.New("logs", logs.LevelInfo)
-	log2 := logs.New("wallet-api", logs.LevelInfo)
+	log1 := logs.New(logs.LevelInfo)
+	log2 := logs.New(logs.LevelInfo)
 
 	t.Logf("log1 = %p, log2 = %p", log1, log2)
 	log1.Info("info")
@@ -24,13 +24,13 @@ func TestLogs(t *testing.T) {
 }
 
 func TestMap(t *testing.T) {
-	log1 := logs.New("logs", logs.LevelInfo)
+	log1 := logs.New(logs.LevelInfo)
 	log1.WithField("test", map[string]interface{}{"test": true}).Info("access")
 }
 
 func TestLogs_WithFunc(t *testing.T) {
-	log := logs.New("logs", logs.LevelInfo).WithFunc("WithFunc")
-	err := errors.New("log error")
+	log := logs.New(logs.LevelInfo).WithFunc("WithFunc")
+	err := errors.New("Error")
 
 	log.Info("info")
 	log.Warn("warn")
@@ -38,21 +38,21 @@ func TestLogs_WithFunc(t *testing.T) {
 }
 
 func TestLogs_Fatal(t *testing.T) {
-	log := logs.New("logs", logs.LevelInfo)
+	log := logs.New(logs.LevelInfo)
 	t.Cleanup(func() {
 		log.Fatal("fatal")
 	})
 }
 
 func TestLogs_WithField(t *testing.T) {
-	log := logs.New("logs", logs.LevelInfo).WithField("hello", "foo....")
+	log := logs.New(logs.LevelInfo).WithField("hello", "foo....")
 
 	log.Info("info...")
 	log.WithField("user_id", "im user").Info("with user id")
 }
 
 func TestLogs_WithFields(t *testing.T) {
-	log := logs.New("logs", logs.LevelInfo).WithFields(map[string]interface{}{
+	log := logs.New(logs.LevelInfo).WithFields(map[string]interface{}{
 		"foo": 123,
 		"bar": "456",
 	})

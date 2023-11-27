@@ -1,7 +1,6 @@
 package logs
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -9,13 +8,12 @@ import (
 
 func TestWithField(t *testing.T) {
 	wg := sync.WaitGroup{}
-	l := newWithOutput("test", LevelDebug, "stdout")
+	l := New("test", LevelDebug)
 	count := 10
 	wg.Add(count)
 	for i := 1; i <= count; i++ {
 		go func(i int) {
 			defer wg.Done()
-			// ctx := context.Background()
 			funcName := fmt.Sprintf("fund-%d", i)
 			ll := l.WithField("func", funcName)
 			ll.Infof("%s done", funcName)
@@ -26,15 +24,14 @@ func TestWithField(t *testing.T) {
 
 func TestWithFields(t *testing.T) {
 	wg := sync.WaitGroup{}
-	l := newWithOutput("test", LevelDebug, "stdout")
+	l := New(LevelDebug)
 	count := 10
 	wg.Add(count)
 	for i := 1; i <= count; i++ {
 		go func(i int) {
 			defer wg.Done()
-			ctx := context.Background()
 			funcName := fmt.Sprintf("fund-%d", i)
-			_, l = l.WithFields(map[string]interface{}{"func": funcName}).Attach(ctx)
+			l = l.WithFields(map[string]interface{}{"func": funcName})
 			l.Infof("%s done", funcName)
 		}(i)
 	}
