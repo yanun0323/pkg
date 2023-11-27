@@ -88,9 +88,7 @@ func (*stdout) Write(p []byte) (int, error) {
 
 	timestamp, _ := jsonparser.GetString(p, "timestamp")
 	level, _ := jsonparser.GetString(p, "level")
-
 	msg, _ := jsonparser.GetString(p, "msg")
-
 	level = strings.ToUpper(level)
 	buf.WriteString(colorize(timestamp, colorBlack))
 	buf.WriteByte(' ')
@@ -137,7 +135,6 @@ func getTitle(level string) string {
 	if level == "WARNING" {
 		level = "WARN"
 	}
-	// span := 5 - len(level)
 	return level
 }
 
