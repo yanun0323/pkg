@@ -19,7 +19,7 @@ func OutputStd() Output {
 
 // OutputFile return an file output.
 func OutputFile(dir, filename string) Output {
-	w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", getAbsPath(dir), fmt.Sprintf("%s", filename)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", getAbsPath(dir), filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	return w
 }
 
