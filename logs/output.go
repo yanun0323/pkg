@@ -86,7 +86,7 @@ type stdout struct{}
 func (*stdout) Write(p []byte) (int, error) {
 	buf := bytes.Buffer{}
 
-	timestamp, _ := jsonparser.GetString(p, "@timestamp")
+	timestamp, _ := jsonparser.GetString(p, "timestamp")
 	level, _ := jsonparser.GetString(p, "level")
 
 	msg, _ := jsonparser.GetString(p, "msg")

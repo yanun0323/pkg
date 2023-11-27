@@ -35,8 +35,7 @@ func New(level Level, outputs ...Output) Logger {
 		TimestampFormat: "2006/01/02 15:04:05",
 		DataKey:         "fields",
 		FieldMap: logrus.FieldMap{
-			logrus.FieldKeyTime: "@timestamp",
-			"timestamp":         "@timestamp",
+			logrus.FieldKeyTime: "timestamp",
 		},
 	})
 
