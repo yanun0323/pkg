@@ -13,9 +13,7 @@ var _defaultLogger *logger
 
 type logKey struct{}
 
-/*
-Get logger from context. if there's no logger in context, it will create one with panic level.
-*/
+// Get gets the logger from context. if there's no logger in context, it will create a new logger with panic level.
 func Get(ctx context.Context) Logger {
 	val := ctx.Value(logKey{})
 	if logger, ok := val.(*logger); ok {
@@ -27,11 +25,14 @@ func Get(ctx context.Context) Logger {
 	return _defaultLogger
 }
 
-/*
-Init a new logger for output.
-*/
+// New initializes a new logger.
 func New(service string, level Level) Logger {
 	return newWithOutput(service, level, "stdout")
+}
+
+// New initializes a new logger with attaching to context.
+func NewWithContext(ctx context.Context, service string, level Level) (context.Context, Logger) {
+	return newWithOutput(service, level, "stdout").Attach(ctx)
 }
 
 func newWithOutput(service string, level Level, outs string) Logger {
@@ -252,9 +253,9 @@ func (l *logger) WithFunc(function string) *logger {
 	}
 }
 
-func (l *logger) Attach(ctx context.Context) (Logger, context.Context) {
+func (l *logger) Attach(ctx context.Context) (context.Context, Logger) {
 	ll := &logger{
 		entry: l.entry,
 	}
-	return ll, context.WithValue(ctx, logKey{}, ll)
+	return context.WithValue(ctx, logKey{}, ll), ll
 }
