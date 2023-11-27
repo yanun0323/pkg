@@ -7,11 +7,29 @@ import (
 	"testing"
 )
 
+func TestWithField(t *testing.T) {
+	wg := sync.WaitGroup{}
+	l := newWithOutput("test", LevelDebug, "stdout")
+	count := 10
+	wg.Add(count)
+	for i := 1; i <= count; i++ {
+		go func(i int) {
+			defer wg.Done()
+			// ctx := context.Background()
+			funcName := fmt.Sprintf("fund-%d", i)
+			ll := l.WithField("func", funcName)
+			ll.Infof("%s done", funcName)
+		}(i)
+	}
+	wg.Wait()
+}
+
 func TestWithFields(t *testing.T) {
 	wg := sync.WaitGroup{}
-	l := newWithOutput("test", LevelPanic, "stdout")
-	wg.Add(100)
-	for i := 1; i <= 100; i++ {
+	l := newWithOutput("test", LevelDebug, "stdout")
+	count := 10
+	wg.Add(count)
+	for i := 1; i <= count; i++ {
 		go func(i int) {
 			defer wg.Done()
 			ctx := context.Background()

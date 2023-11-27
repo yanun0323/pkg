@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/yanun0323/pkg/logs"
+
+	"github.com/pkg/errors"
 )
 
 func TestGet(t *testing.T) {
@@ -28,10 +30,11 @@ func TestMap(t *testing.T) {
 
 func TestLogs_WithFunc(t *testing.T) {
 	log := logs.New("logs", logs.LevelInfo).WithFunc("WithFunc")
+	err := errors.New("log error")
 
 	log.Info("info")
 	log.Warn("warn")
-	log.Error("error")
+	log.WithError(err).Error("error")
 }
 
 func TestLogs_Fatal(t *testing.T) {

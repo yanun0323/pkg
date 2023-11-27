@@ -253,9 +253,8 @@ func (l *logger) WithFunc(function string) *logger {
 }
 
 func (l *logger) Attach(ctx context.Context) (Logger, context.Context) {
-	return &logger{
-			entry: l.entry,
-		}, context.WithValue(ctx, logKey{}, &logger{
-			entry: l.entry,
-		})
+	ll := &logger{
+		entry: l.entry,
+	}
+	return ll, context.WithValue(ctx, logKey{}, ll)
 }
