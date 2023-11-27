@@ -34,7 +34,7 @@ func TestWithFields(t *testing.T) {
 			defer wg.Done()
 			ctx := context.Background()
 			funcName := fmt.Sprintf("fund-%d", i)
-			l, _ = l.WithFields(map[string]interface{}{"func": funcName}).Attach(ctx)
+			_, l = l.WithFields(map[string]interface{}{"func": funcName}).Attach(ctx)
 			l.Infof("%s done", funcName)
 		}(i)
 	}
