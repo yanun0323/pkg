@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestWithField(t *testing.T) {
+func TestWithFieldLoop(t *testing.T) {
 	wg := sync.WaitGroup{}
-	l := New("test", LevelDebug)
+	l := New(LevelDebug)
 	count := 10
 	wg.Add(count)
 	for i := 1; i <= count; i++ {
@@ -22,7 +22,7 @@ func TestWithField(t *testing.T) {
 	wg.Wait()
 }
 
-func TestWithFields(t *testing.T) {
+func TestWithFieldsLoop(t *testing.T) {
 	wg := sync.WaitGroup{}
 	l := New(LevelDebug)
 	count := 10

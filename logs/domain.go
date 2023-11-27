@@ -13,7 +13,7 @@ type Logger interface {
 	Debugf(format string, args ...interface{})
 	// Debugln(args ...interface{})
 
-	// Copy duplicates the logger
+	// Copy duplicates the logger.
 	Copy() Logger
 	Error(args ...interface{})
 	Errorf(format string, args ...interface{})

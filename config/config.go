@@ -26,7 +26,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	)
 
 	if dump {
-		log = logs.New("config", logs.LevelInfo)
+		log = logs.New(logs.LevelInfo)
 	}
 
 	sync.OnceFunc(func() {

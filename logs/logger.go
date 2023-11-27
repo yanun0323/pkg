@@ -20,20 +20,13 @@ func Get(ctx context.Context) Logger {
 		return logger
 	}
 	if _defaultLogger == nil {
-		return newWithOutput(LevelInfo)
+		return New(LevelInfo)
 	}
 	return _defaultLogger
 }
 
-// New initializes a new logger with level. Use 'info' level when inputs empty.
-func New(level ...Level) Logger {
-	if len(level) == 0 {
-		newWithOutput(LevelInfo)
-	}
-	return newWithOutput(level[0])
-}
-
-func newWithOutput(level Level) Logger {
+// New initializes a new logger with level and provided outputs.
+func New(level Level, outputs ...Output) Logger {
 	l := logrus.New()
 	l.SetLevel(level.logrus())
 	l.SetNoLock()
@@ -43,11 +36,15 @@ func newWithOutput(level Level) Logger {
 		DataKey:         "fields",
 		FieldMap: logrus.FieldMap{
 			logrus.FieldKeyTime: "@timestamp",
+			"timestamp":         "@timestamp",
 		},
 	})
 
-	// var out output
-	// l.SetOutput(out.new(outs, service))
+	if len(outputs) == 0 {
+		outputs = append(outputs, OutputStd())
+	}
+
+	l.SetOutput(newOutputContainer(outputs...))
 
 	log := &logger{
 		entry: l.WithContext(context.Background()),

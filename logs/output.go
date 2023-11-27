@@ -10,8 +10,20 @@ import (
 	"github.com/buger/jsonparser"
 )
 
-type output struct {
-	service string
+type Output io.Writer
+
+// OutputStd return a std output.
+func OutputStd() Output {
+	return &stdout{}
+}
+
+// OutputFile return an file output.
+func OutputFile(dir, filename string) Output {
+	w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", getAbsPath(dir), fmt.Sprintf("%s", filename)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	return w
+}
+
+type outputContainer struct {
 	writers []io.Writer
 }
 
@@ -23,28 +35,17 @@ const (
 	errorMsgBegin = "\n"
 )
 
-func (o *output) new(outs, service string) io.Writer {
-	writers := []io.Writer{}
-
-	if strings.Contains(outs, "stdout") {
-		writers = append(writers, &stdout{})
+func newOutputContainer(ops ...Output) io.Writer {
+	writers := make([]io.Writer, 0, len(ops))
+	for _, op := range ops {
+		writers = append(writers, op)
 	}
-
-	if strings.Contains(outs, "file") {
-		w, _ := os.OpenFile(fmt.Sprintf("%s/%s.log", getAbsPath(service, "log"), fmt.Sprintf("/%s", service)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-		writers = append(writers, &file{
-			writer: w,
-		})
-	}
-
-	return &output{
-		service: service,
+	return &outputContainer{
 		writers: writers,
 	}
 }
 
-func (o *output) Write(p []byte) (int, error) {
+func (o *outputContainer) Write(p []byte) (int, error) {
 	for _, w := range o.writers {
 		if _, err := w.Write(p); err != nil {
 			fmt.Println(err)
@@ -85,30 +86,23 @@ type stdout struct{}
 func (*stdout) Write(p []byte) (int, error) {
 	buf := bytes.Buffer{}
 
-	timestamp, _ := jsonparser.GetString(p, "timestamp")
+	timestamp, _ := jsonparser.GetString(p, "@timestamp")
 	level, _ := jsonparser.GetString(p, "level")
 
 	msg, _ := jsonparser.GetString(p, "msg")
-	file, _ := jsonparser.GetString(p, "file")
-	line := file[strings.LastIndex(file, "/")+1:]
 
 	level = strings.ToUpper(level)
-	buf.WriteString(colorize(timestamp, colorBrightBlack))
-	buf.WriteString(" ")
+	buf.WriteString(colorize(timestamp, colorBlack))
+	buf.WriteByte(' ')
 	buf.WriteString(colorize(getTitle(level), getLevelColor(level)))
-	buf.WriteString(" ")
-
-	buf.WriteString(" ")
+	buf.WriteByte(' ')
 	buf.WriteString(msg)
-	buf.WriteString(" ")
-	buf.WriteString("@")
-	buf.WriteString(line)
 
 	fields := [][]byte{}
 	errorMsg, _ := jsonparser.GetString(p, "fields", "error")
 
 	if errorMsg != "" {
-		errorMsg = errorMsgBegin + errorMsg
+		errorMsg = errorMsgBegin + colorize("[error stack] ", colorBrightRed) + errorMsg
 		errorMsgReplacer := strings.NewReplacer(errorReplaceString...)
 		errorMsg = errorMsgReplacer.Replace(errorMsg)
 		p = jsonparser.Delete(p, "fields", "error")
@@ -116,19 +110,19 @@ func (*stdout) Write(p []byte) (int, error) {
 
 	jsonparser.ObjectEach(p, func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
 		field := bytes.Buffer{}
-		field.Write([]byte(colorize(string(key), colorCyan)))
-		field.Write([]byte("="))
-		field.Write(value)
+		field.WriteString(colorize("["+string(key)+"] ", colorMagenta))
+		field.WriteString(colorize(string(value), colorBlack))
 		fields = append(fields, field.Bytes())
 
 		return nil
 	}, "fields")
 
-	if len(fields) > 0 {
-		buf.WriteString(" ")
-		buf.WriteString("[")
-		buf.Write(bytes.Join(fields, []byte(",")))
-		buf.WriteString("]")
+	if len(fields) != 0 {
+		buf.WriteString("  ")
+		buf.Write(bytes.Join(fields, []byte(" ")))
+	}
+
+	if len(errorMsg) != 0 {
 		buf.WriteString(errorMsg)
 	}
 
@@ -143,8 +137,8 @@ func getTitle(level string) string {
 	if level == "WARNING" {
 		level = "WARN"
 	}
-	span := 6 - len(level)
-	return " " + level + strings.Repeat(" ", span)
+	// span := 5 - len(level)
+	return level
 }
 
 func getLevelColor(level string) int {
@@ -162,14 +156,4 @@ func getLevelColor(level string) int {
 	default:
 		return colorBlue
 	}
-}
-
-type file struct {
-	writer *os.File
-}
-
-func (f *file) Write(p []byte) (int, error) {
-	fmt.Fprint(f.writer, string(p))
-
-	return len(p), nil
 }
