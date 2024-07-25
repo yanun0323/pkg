@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _defaultLogger Logger
+var _defaultLogger Logger = New(LevelDebug)
 
 type logKey struct{}
 
@@ -19,9 +19,7 @@ func Get(ctx context.Context) Logger {
 	if logger, ok := val.(Logger); ok {
 		return logger
 	}
-	if _defaultLogger == nil {
-		return New(LevelInfo)
-	}
+
 	return _defaultLogger
 }
 
@@ -47,10 +45,6 @@ func New(level Level, outputs ...Output) Logger {
 
 	log := &logger{
 		entry: l.WithContext(context.Background()),
-	}
-
-	if _defaultLogger == nil {
-		_defaultLogger = log
 	}
 
 	return log
