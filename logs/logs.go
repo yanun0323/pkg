@@ -1,73 +1,91 @@
 package logs
 
+import "sync/atomic"
+
+var _defaultLogger atomic.Value
+
+func Default() Logger {
+	l, ok := _defaultLogger.Load().(Logger)
+	if !ok {
+		l = New(LevelDebug)
+		_defaultLogger.Store(l)
+	}
+
+	return l
+}
+
+func SetDefault(logger Logger) {
+	_defaultLogger.Store(logger)
+}
+
 func Debug(args ...interface{}) {
-	_defaultLogger.Debug(args...)
+	Default().Debug(args...)
 }
 
 func Debugf(format string, args ...interface{}) {
-	_defaultLogger.Debugf(format, args...)
+	Default().Debugf(format, args...)
 }
 
 func Error(args ...interface{}) {
-	_defaultLogger.Error(args...)
+	Default().Error(args...)
 }
 
 func Errorf(format string, args ...interface{}) {
-	_defaultLogger.Errorf(format, args...)
+	Default().Errorf(format, args...)
 }
 
 func Fatal(args ...interface{}) {
-	_defaultLogger.Fatal(args...)
+	Default().Fatal(args...)
 }
 
 func Fatalf(format string, args ...interface{}) {
-	_defaultLogger.Fatalf(format, args...)
+	Default().Fatalf(format, args...)
 }
 
 func Info(args ...interface{}) {
-	_defaultLogger.Info(args...)
+	Default().Info(args...)
 }
 
 func Infof(format string, args ...interface{}) {
-	_defaultLogger.Infof(format, args...)
+	Default().Infof(format, args...)
 }
 
 func Panic(args ...interface{}) {
-	_defaultLogger.Panic(args...)
+	Default().Panic(args...)
 }
 
 func Panicf(format string, args ...interface{}) {
-	_defaultLogger.Panicf(format, args...)
+	Default().Panicf(format, args...)
 }
 
 func Print(args ...interface{}) {
-	_defaultLogger.Print(args...)
+	Default().Print(args...)
 }
 
 func Printf(format string, args ...interface{}) {
-	_defaultLogger.Printf(format, args...)
+	Default().Printf(format, args...)
 }
 
 func Trace(args ...interface{}) {
-	_defaultLogger.Trace(args...)
+	Default().Trace(args...)
 }
 
 func Tracef(format string, args ...interface{}) {
-	_defaultLogger.Tracef(format, args...)
+	Default().Tracef(format, args...)
 }
 
 func Warn(args ...interface{}) {
-	_defaultLogger.Warn(args...)
+	Default().Warn(args...)
 }
 
 func Warnf(format string, args ...interface{}) {
-	_defaultLogger.Warnf(format, args...)
+	Default().Warnf(format, args...)
 }
 
 func Warning(args ...interface{}) {
-	_defaultLogger.Warning(args...)
+	Default().Warning(args...)
 }
 
 func Warningf(format string, args ...interface{}) {
-	_defaultLogger.Warningf(format, args...)
+	Default().Warningf(format, args...)
 }

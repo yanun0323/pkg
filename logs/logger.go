@@ -9,8 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _defaultLogger Logger = New(LevelDebug)
-
 type logKey struct{}
 
 // Get gets the logger from context. if there's no logger in context, it will create a new logger with 'info' level.
@@ -20,7 +18,7 @@ func Get(ctx context.Context) Logger {
 		return logger
 	}
 
-	return _defaultLogger
+	return Default()
 }
 
 // New initializes a new logger with level and provided outputs.
