@@ -7,7 +7,7 @@ var _defaultLogger atomic.Value
 func Default() Logger {
 	l, ok := _defaultLogger.Load().(Logger)
 	if !ok {
-		l = New(LevelDebug)
+		l = New(LevelInfo)
 		_defaultLogger.Store(l)
 	}
 
@@ -16,6 +16,10 @@ func Default() Logger {
 
 func SetDefault(logger Logger) {
 	_defaultLogger.Store(logger)
+}
+
+func SetDefaultLevel(level Level) {
+	_defaultLogger.Store(New(level))
 }
 
 func Debug(args ...interface{}) {
