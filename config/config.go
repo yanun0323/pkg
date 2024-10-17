@@ -65,6 +65,16 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	return err
 }
 
+func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T, error) {
+	if err := Init(cfgName, dump, relativePaths...); err != nil {
+		return nil, err
+	}
+
+	var cfg *T
+	err := viper.Unmarshal(cfg)
+	return cfg, err
+}
+
 func dumpConfig(log logs.Logger) {
 	keys := viper.AllKeys()
 	sort.Strings(keys)
