@@ -229,15 +229,13 @@ func (l *logger) WriterLevel(level Level) *io.PipeWriter {
 	return l.entry.WriterLevel(level.logrus())
 }
 
-func (l *logger) WithFunc(function string) *logger {
+func (l *logger) WithFunc(function string) Logger {
 	return &logger{
 		entry: l.entry.WithField("func", function),
 	}
 }
 
 func (l *logger) Attach(ctx context.Context) (context.Context, Logger) {
-	ll := &logger{
-		entry: l.entry,
-	}
+	ll := l.Copy()
 	return context.WithValue(ctx, logKey{}, ll), ll
 }
