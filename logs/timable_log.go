@@ -15,7 +15,7 @@ type timeLog struct {
 
 func NewTimableLog(logger Logger, interval time.Duration) Logger {
 	return &timeLog{
-		logger:   logger,
+		logger:   logger.Copy(),
 		interval: interval,
 		previous: &atomic.Int64{},
 	}
