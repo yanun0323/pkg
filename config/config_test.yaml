@@ -1,1 +1,3 @@
 test: hello
+test_snake: snake should be failed
+testCamel: camel  
