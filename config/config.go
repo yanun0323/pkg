@@ -70,9 +70,12 @@ func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T,
 		return nil, err
 	}
 
-	var cfg *T
-	err := viper.Unmarshal(cfg)
-	return cfg, err
+	var cfg T
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, errors.Wrap(err, "unmarshal config")
+	}
+
+	return &cfg, nil
 }
 
 func dumpConfig(log logs.Logger) {
