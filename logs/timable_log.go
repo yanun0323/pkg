@@ -31,6 +31,10 @@ func (tl *timeLog) timeHook(fn func()) {
 	fn()
 }
 
+func (tl *timeLog) GetLevel() Level {
+	return tl.logger.GetLevel()
+}
+
 func (tl *timeLog) SetOutput(output io.Writer) {
 	tl.logger.SetOutput(output)
 }

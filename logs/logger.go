@@ -52,6 +52,10 @@ type logger struct {
 	entry *logrus.Entry
 }
 
+func (l *logger) GetLevel() Level {
+	return newLevelFromLogrus(l.entry.Logger.Level)
+}
+
 func (l *logger) SetOutput(output io.Writer) {
 	l.entry.Logger.SetOutput(output)
 }

@@ -39,6 +39,27 @@ func NewLevel(lvl string) Level {
 	return "panic"
 }
 
+func newLevelFromLogrus(lvl logrus.Level) Level {
+	switch lvl {
+	case logrus.PanicLevel:
+		return LevelPanic
+	case logrus.FatalLevel:
+		return LevelFatal
+	case logrus.ErrorLevel:
+		return LevelError
+	case logrus.WarnLevel:
+		return LevelWarn
+	case logrus.InfoLevel:
+		return LevelInfo
+	case logrus.DebugLevel:
+		return LevelDebug
+	case logrus.TraceLevel:
+		return LevelTrace
+	}
+
+	return LevelPanic
+}
+
 func (level Level) logrus() logrus.Level {
 	switch level {
 	case LevelTrace:

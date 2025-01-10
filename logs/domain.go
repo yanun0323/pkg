@@ -8,6 +8,7 @@ import (
 
 type Logger interface {
 	// SetOutput sets the logger output.
+	GetLevel() Level
 	SetOutput(output io.Writer)
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
