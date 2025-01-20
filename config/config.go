@@ -82,9 +82,9 @@ func dumpConfig(log logs.Logger) {
 	keys := viper.AllKeys()
 	sort.Strings(keys)
 	for _, key := range keys {
-		if strings.Contains(key, "password") || strings.Contains(key, "secret") || strings.Contains(key, "key") || strings.Contains(key, "pass") || strings.Contains(key, "pem") {
-			continue
-		}
+		// if strings.Contains(key, "password") || strings.Contains(key, "secret") || strings.Contains(key, "key") || strings.Contains(key, "pass") || strings.Contains(key, "pem") {
+		// 	continue
+		// }
 		log.Info(key, ": ", viper.Get(key))
 	}
 }
