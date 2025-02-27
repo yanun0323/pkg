@@ -3,6 +3,7 @@ package pubsub_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/yanun0323/pkg/pubsub"
 )
@@ -16,4 +17,11 @@ func TestProducer(t *testing.T) {
 		return true
 	})
 
+	p.Publish(context.Background(), 1)
+
+	select {
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout")
+	case <-receiver:
+	}
 }
