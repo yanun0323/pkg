@@ -13,9 +13,9 @@ const (
 )
 
 type loggerLight struct {
+	fields     map[string]any
 	ctx        context.Context
 	level      Level
-	fields     map[string]any
 	output     Output
 	timeFormat string
 	time       *time.Time
@@ -194,7 +194,7 @@ func (l *loggerLight) print(level Level, args ...interface{}) {
 		return
 	}
 
-	lightOutput{l, level}.Write([]byte(fmt.Sprint(args...)))
+	l.write(level, fmt.Sprint(args...))
 }
 
 func (l *loggerLight) printf(level Level, format string, args ...interface{}) {
@@ -202,28 +202,23 @@ func (l *loggerLight) printf(level Level, format string, args ...interface{}) {
 		return
 	}
 
-	lightOutput{l, level}.Write([]byte(fmt.Sprintf(format, args...)))
+	l.write(level, fmt.Sprintf(format, args...))
 }
 
-type lightOutput struct {
-	l     *loggerLight
-	level Level
-}
-
-func (o lightOutput) Write(msg []byte) (int, error) {
+func (l *loggerLight) write(level Level, msg string) (int, error) {
 	t := time.Now()
-	if o.l.time != nil {
-		t = *o.l.time
+	if l.time != nil {
+		t = *l.time
 	}
-	buf := bytes.NewBuffer(nil)
 
-	buf.WriteString(colorize(t.Format(o.l.timeFormat), colorBlack))
+	buf := bytes.Buffer{}
+	buf.WriteString(colorize(t.Format(l.timeFormat), colorBlack))
 	buf.WriteByte(' ')
-	buf.WriteString(colorize(getTitle(o.level.String()), getLevelColor(o.level.String())))
+	buf.WriteString(colorize(getTitle(level.String()), getLevelColor(level.String())))
 	buf.WriteByte(' ')
-	buf.Write(msg)
+	buf.WriteString(msg)
 
-	for k, v := range o.l.fields {
+	for k, v := range l.fields {
 		if k == "error" {
 			continue
 		}
@@ -232,13 +227,13 @@ func (o lightOutput) Write(msg []byte) (int, error) {
 		buf.WriteString(colorize(fmt.Sprintf("%v", v), colorBlack))
 	}
 
-	if o.l.ctx != nil {
+	if l.ctx != nil {
 		buf.WriteString("  ")
 		buf.WriteString(colorize("[context] ", colorMagenta))
-		buf.WriteString(colorize(fmt.Sprintf("%v", o.l.ctx), colorBlack))
+		buf.WriteString(colorize(fmt.Sprintf("%v", l.ctx), colorBlack))
 	}
 
-	if err, errOK := o.l.fields["error"]; errOK && err != nil {
+	if err, errOK := l.fields["error"]; errOK && err != nil {
 		buf.WriteByte('\n')
 		buf.WriteString(colorize("[error stack] ", colorBrightRed))
 		buf.WriteString(errorMsgReplacer.Replace(fmt.Sprintf("%+v", err)))
@@ -247,7 +242,5 @@ func (o lightOutput) Write(msg []byte) (int, error) {
 	buf.WriteString("\n")
 
 	p := buf.String()
-	fmt.Fprint(o.l.output, p)
-
-	return len(p), nil
+	return fmt.Fprint(l.output, p)
 }
