@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
 
@@ -13,35 +14,38 @@ const (
 )
 
 type loggerLight struct {
-	fields     map[string]any
+	fields     bytes.Buffer
+	err        error
 	ctx        context.Context
 	level      Level
-	output     Output
+	output     io.Writer
 	timeFormat string
 	time       *time.Time
 }
 
-func NewLightweightLogger(level Level, outputs ...Output) Logger {
+func NewLightweightLogger(level Level, outputs ...io.Writer) Logger {
+	var (
+		out io.Writer = os.Stdout
+	)
+	if len(outputs) != 0 {
+		out = outputs[0]
+	}
+
 	return &loggerLight{
 		ctx:        context.Background(),
 		level:      LevelInfo,
-		fields:     map[string]any{},
-		output:     &outputCluster{outputs},
+		output:     out,
 		timeFormat: _defaultTimestampFormat,
 		time:       nil,
 	}
 }
 
 func (l *loggerLight) copy() *loggerLight {
-	copied := make(map[string]any, len(l.fields))
-	for k, v := range l.fields {
-		copied[k] = v
-	}
-
 	return &loggerLight{
+		fields:     l.fields,
+		err:        l.err,
 		ctx:        l.ctx,
 		level:      l.level,
-		fields:     copied,
 		output:     l.output,
 		timeFormat: l.timeFormat,
 		time:       l.time,
@@ -78,27 +82,27 @@ func (l *loggerLight) WithTime(t time.Time) Logger {
 
 func (l *loggerLight) WithField(key string, value any) Logger {
 	ll := l.copy()
-	ll.fields[key] = value
+	ll.addField(key, value)
 	return ll
 }
 
 func (l *loggerLight) WithFields(fields map[string]any) Logger {
 	ll := l.copy()
 	for k, v := range fields {
-		ll.fields[k] = v
+		ll.addField(k, v)
 	}
 	return ll
 }
 
 func (l *loggerLight) WithFunc(function string) Logger {
 	ll := l.copy()
-	ll.fields["func"] = function
+	ll.addField("func", function)
 	return ll
 }
 
 func (l *loggerLight) WithError(err error) Logger {
 	ll := l.copy()
-	ll.fields["error"] = err
+	ll.err = err
 	return ll
 }
 
@@ -205,6 +209,16 @@ func (l *loggerLight) printf(level Level, format string, args ...interface{}) {
 	l.write(level, fmt.Sprintf(format, args...))
 }
 
+func (l *loggerLight) addField(key string, value any) {
+	switch key {
+	case "error":
+	default:
+		l.fields.WriteString("  ")
+		l.fields.WriteString(colorize("["+key+"] ", colorMagenta))
+		l.fields.WriteString(colorize(fmt.Sprintf("%v", value), colorBlack))
+	}
+}
+
 func (l *loggerLight) write(level Level, msg string) (int, error) {
 	t := time.Now()
 	if l.time != nil {
@@ -218,13 +232,8 @@ func (l *loggerLight) write(level Level, msg string) (int, error) {
 	buf.WriteByte(' ')
 	buf.WriteString(msg)
 
-	for k, v := range l.fields {
-		if k == "error" {
-			continue
-		}
-		buf.WriteString("  ")
-		buf.WriteString(colorize("["+k+"] ", colorMagenta))
-		buf.WriteString(colorize(fmt.Sprintf("%v", v), colorBlack))
+	if l.fields.Len() != 0 {
+		buf.Write(l.fields.Bytes())
 	}
 
 	if l.ctx != nil {
@@ -233,13 +242,13 @@ func (l *loggerLight) write(level Level, msg string) (int, error) {
 		buf.WriteString(colorize(fmt.Sprintf("%v", l.ctx), colorBlack))
 	}
 
-	if err, errOK := l.fields["error"]; errOK && err != nil {
+	if l.err != nil {
 		buf.WriteByte('\n')
 		buf.WriteString(colorize("[error stack] ", colorBrightRed))
-		buf.WriteString(errorMsgReplacer.Replace(fmt.Sprintf("%+v", err)))
+		buf.WriteString(errorMsgReplacer.Replace(fmt.Sprintf("%+v", l.err)))
 	}
 
-	buf.WriteString("\n")
+	buf.WriteByte('\n')
 
 	p := buf.String()
 	return fmt.Fprint(l.output, p)
