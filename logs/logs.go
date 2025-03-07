@@ -62,14 +62,6 @@ func Panicf(format string, args ...interface{}) {
 	Default().Panicf(format, args...)
 }
 
-func Print(args ...interface{}) {
-	Default().Print(args...)
-}
-
-func Printf(format string, args ...interface{}) {
-	Default().Printf(format, args...)
-}
-
 func Trace(args ...interface{}) {
 	Default().Trace(args...)
 }

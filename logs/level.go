@@ -103,3 +103,28 @@ const (
 	// LevelTrace level. Designates finer-grained informational events than the Debug.
 	LevelTrace Level = "trace"
 )
+
+func (level Level) i() int {
+	switch level {
+	case LevelPanic:
+		return 0
+	case LevelFatal:
+		return 1
+	case LevelError:
+		return 2
+	case LevelWarn:
+		return 3
+	case LevelInfo:
+		return 4
+	case LevelDebug:
+		return 5
+	case LevelTrace:
+		return 6
+	}
+
+	return 0
+}
+
+func (level Level) isAvailable(l Level) bool {
+	return level.i() >= l.i()
+}

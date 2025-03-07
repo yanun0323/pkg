@@ -39,7 +39,7 @@ func New(level Level, outputs ...Output) Logger {
 		outputs = append(outputs, OutputStd())
 	}
 
-	l.SetOutput(newOutputContainer(outputs...))
+	l.SetOutput(&outputCluster{outputs})
 
 	log := &logger{
 		entry: l.WithContext(context.Background()),

@@ -23,29 +23,20 @@ func OutputFile(dir, filename string) Output {
 	return w
 }
 
-type outputContainer struct {
-	writers []io.Writer
+type outputCluster struct {
+	writers []Output
 }
 
 var (
 	errorReplaceString = []string{"\\n", "\n", "\\t", "\t"}
+	errorMsgReplacer   = strings.NewReplacer(errorReplaceString...)
 )
 
 const (
 	errorMsgBegin = "\n"
 )
 
-func newOutputContainer(ops ...Output) io.Writer {
-	writers := make([]io.Writer, 0, len(ops))
-	for _, op := range ops {
-		writers = append(writers, op)
-	}
-	return &outputContainer{
-		writers: writers,
-	}
-}
-
-func (o *outputContainer) Write(p []byte) (int, error) {
+func (o *outputCluster) Write(p []byte) (int, error) {
 	for _, w := range o.writers {
 		if _, err := w.Write(p); err != nil {
 			fmt.Println(err)
@@ -53,32 +44,6 @@ func (o *outputContainer) Write(p []byte) (int, error) {
 	}
 
 	return len(p), nil
-}
-
-const (
-	colorBlack = iota + 30
-	colorRed
-	colorGreen
-	colorYellow
-	colorBlue
-	colorMagenta
-	colorCyan
-	colorWhite
-)
-
-const (
-	colorBrightBlack = iota + 90
-	colorBrightRed
-	colorBrightGreen
-	colorBrightYellow
-	colorBrightBlue
-	colorBrightMagenta
-	colorBrightCyan
-	colorBrightWhite
-)
-
-func colorize(s interface{}, c int) string {
-	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }
 
 type stdout struct{}
@@ -129,28 +94,4 @@ func (*stdout) Write(p []byte) (int, error) {
 	fmt.Fprint(os.Stdout, buf.String())
 
 	return len(p), nil
-}
-
-func getTitle(level string) string {
-	if level == "WARNING" {
-		level = "WARN"
-	}
-	return level
-}
-
-func getLevelColor(level string) int {
-	switch level {
-	case "DEBUG":
-		return colorBlue
-	case "INFO":
-		return colorGreen
-	case "ERROR", "PANIC":
-		return colorRed + 10
-	case "WARNING":
-		return colorYellow
-	case "FATAL":
-		return colorBrightRed
-	default:
-		return colorBlue
-	}
 }

@@ -128,18 +128,6 @@ func (tl *timeLog) Panicf(format string, args ...interface{}) {
 	})
 }
 
-func (tl *timeLog) Print(args ...interface{}) {
-	tl.timeHook(func() {
-		tl.logger.Print(args...)
-	})
-}
-
-func (tl *timeLog) Printf(format string, args ...interface{}) {
-	tl.timeHook(func() {
-		tl.logger.Printf(format, args...)
-	})
-}
-
 func (tl *timeLog) Trace(args ...interface{}) {
 	tl.timeHook(func() {
 		tl.logger.Trace(args...)

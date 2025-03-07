@@ -33,9 +33,6 @@ type Logger interface {
 	Panic(args ...interface{})
 	Panicf(format string, args ...interface{})
 
-	Print(args ...interface{})
-	Printf(format string, args ...interface{})
-
 	Trace(args ...interface{})
 	Tracef(format string, args ...interface{})
 

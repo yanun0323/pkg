@@ -15,7 +15,7 @@ type Subscribable[T any] interface {
 type Producer[T any] interface {
 	// Publish publishes a value to all subscribers.
 	//
-	// It uses the producer timeout if not provided.
+	// It uses the default timeout (15 seconds) if the constructor not provided.
 	Publish(context.Context, T)
 
 	// Produce runs a goroutine to publish the value to the subscribers.
