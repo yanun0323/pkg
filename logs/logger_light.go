@@ -13,42 +13,38 @@ const (
 )
 
 type loggerLight struct {
-	ctx        *value[context.Context]
-	level      *value[Level]
-	fields     *value[map[string]any]
-	output     *value[Output]
-	timeFormat *value[string]
-	time       *value[*time.Time]
+	ctx        context.Context
+	level      Level
+	fields     map[string]any
+	output     Output
+	timeFormat string
+	time       *time.Time
 }
 
 func NewLightweightLogger(level Level, outputs ...Output) Logger {
 	return &loggerLight{
-		ctx:        newValue(context.Background()),
-		level:      newValue(LevelInfo),
-		fields:     newValue(map[string]any{}),
-		output:     newValue[Output](&outputCluster{outputs}),
-		timeFormat: newValue(_defaultTimestampFormat),
-		time:       newValue[*time.Time](),
+		ctx:        context.Background(),
+		level:      LevelInfo,
+		fields:     map[string]any{},
+		output:     &outputCluster{outputs},
+		timeFormat: _defaultTimestampFormat,
+		time:       nil,
 	}
 }
 
 func (l *loggerLight) copy() *loggerLight {
-	var copied map[string]any
-	l.fields.Update(func(fields map[string]any) map[string]any {
-		copied = make(map[string]any, len(fields))
-		for k, v := range fields {
-			copied[k] = v
-		}
-		return fields
-	})
+	copied := make(map[string]any, len(l.fields))
+	for k, v := range l.fields {
+		copied[k] = v
+	}
 
 	return &loggerLight{
-		ctx:        l.ctx.Copy(),
-		level:      l.level.Copy(),
-		fields:     newValue(copied),
-		output:     l.output.Copy(),
-		timeFormat: l.timeFormat.Copy(),
-		time:       l.time.Copy(),
+		ctx:        l.ctx,
+		level:      l.level,
+		fields:     copied,
+		output:     l.output,
+		timeFormat: l.timeFormat,
+		time:       l.time,
 	}
 }
 
@@ -57,64 +53,52 @@ func (l *loggerLight) Copy() Logger {
 }
 
 func (l *loggerLight) GetLevel() Level {
-	return l.level.Load()
+	return l.level
 }
 
 func (l *loggerLight) SetOutput(output io.Writer) {
-	l.output.Store(output)
+	l.output = output
 }
 
 func (l *loggerLight) SetTimestampFormat(format string) {
-	l.timeFormat.Store(format)
+	l.timeFormat = format
 }
 
 func (l *loggerLight) WithContext(ctx context.Context) Logger {
 	ll := l.copy()
-	ll.ctx.Store(ctx)
+	ll.ctx = ctx
 	return ll
 }
 
 func (l *loggerLight) WithTime(t time.Time) Logger {
 	ll := l.copy()
-	ll.time.Store(&t)
+	ll.time = &t
 	return ll
 }
 
 func (l *loggerLight) WithField(key string, value any) Logger {
 	ll := l.copy()
-	ll.fields.Update(func(fields map[string]any) map[string]any {
-		fields[key] = value
-		return fields
-	})
+	ll.fields[key] = value
 	return ll
 }
 
 func (l *loggerLight) WithFields(fields map[string]any) Logger {
 	ll := l.copy()
-	ll.fields.Update(func(fields map[string]any) map[string]any {
-		for k, v := range fields {
-			fields[k] = v
-		}
-		return fields
-	})
+	for k, v := range fields {
+		ll.fields[k] = v
+	}
 	return ll
 }
 
 func (l *loggerLight) WithFunc(function string) Logger {
 	ll := l.copy()
-	ll.fields.Update(func(fields map[string]any) map[string]any {
-		fields["func"] = function
-		return fields
-	})
+	ll.fields["func"] = function
 	return ll
 }
 
 func (l *loggerLight) WithError(err error) Logger {
 	ll := l.copy()
-	ll.fields.Update(func(fields map[string]any) map[string]any {
-		fields["error"] = err
-		return fields
-	})
+	ll.fields["error"] = err
 	return ll
 }
 
@@ -228,34 +212,33 @@ type lightOutput struct {
 
 func (o lightOutput) Write(msg []byte) (int, error) {
 	t := time.Now()
-	if tt := o.l.time.Load(); tt != nil {
-		t = *tt
+	if o.l.time != nil {
+		t = *o.l.time
 	}
 	buf := bytes.NewBuffer(nil)
 
-	buf.WriteString(colorize(t.Format(o.l.timeFormat.Load()), colorBlack))
+	buf.WriteString(colorize(t.Format(o.l.timeFormat), colorBlack))
 	buf.WriteByte(' ')
 	buf.WriteString(colorize(getTitle(o.level.String()), getLevelColor(o.level.String())))
 	buf.WriteByte(' ')
 	buf.Write(msg)
 
-	fields := o.l.fields.Load()
-	err, errOK := fields["error"]
-	delete(fields, "error")
-
-	for k, v := range fields {
+	for k, v := range o.l.fields {
+		if k == "error" {
+			continue
+		}
 		buf.WriteString("  ")
 		buf.WriteString(colorize("["+k+"] ", colorMagenta))
 		buf.WriteString(colorize(fmt.Sprintf("%v", v), colorBlack))
 	}
 
-	if ctx := o.l.ctx.Load(); ctx != nil {
+	if o.l.ctx != nil {
 		buf.WriteString("  ")
 		buf.WriteString(colorize("[context] ", colorMagenta))
-		buf.WriteString(colorize(fmt.Sprintf("%v", ctx), colorBlack))
+		buf.WriteString(colorize(fmt.Sprintf("%v", o.l.ctx), colorBlack))
 	}
 
-	if errOK {
+	if err, errOK := o.l.fields["error"]; errOK && err != nil {
 		buf.WriteByte('\n')
 		buf.WriteString(colorize("[error stack] ", colorBrightRed))
 		buf.WriteString(errorMsgReplacer.Replace(fmt.Sprintf("%+v", err)))
@@ -264,7 +247,7 @@ func (o lightOutput) Write(msg []byte) (int, error) {
 	buf.WriteString("\n")
 
 	p := buf.String()
-	fmt.Fprint(o.l.output.Load(), p)
+	fmt.Fprint(o.l.output, p)
 
 	return len(p), nil
 }
