@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/yanun0323/pkg/logs"
-
-	"github.com/pkg/errors"
 )
 
 func TestGet(t *testing.T) {
@@ -17,16 +15,32 @@ func TestGet(t *testing.T) {
 }
 
 func TestLogOutput(t *testing.T) {
-	log1 := logs.New(logs.LevelInfo, logs.OutputStd())
-	log2 := logs.New(logs.LevelInfo, logs.OutputStd(), logs.OutputFile(".", "dir_dot"))
-	log3 := logs.New(logs.LevelInfo, logs.OutputStd(), logs.OutputFile("", "dir_empty"))
-	log4 := logs.New(logs.LevelInfo, logs.OutputStd(), logs.OutputFile("hello", "dir_wrong"))
+	w2 := logs.FileWriter(".", "dir_dot")
+	w3 := logs.FileWriter("", "dir_empty")
+	w4 := logs.FileWriter("hello", "dir_wrong")
+
+	log1 := logs.New(logs.LevelInfo, os.Stdout)
+	log2 := logs.New(logs.LevelInfo, os.Stdout, w2)
+	log3 := logs.New(logs.LevelInfo, os.Stdout, w3)
+	log4 := logs.New(logs.LevelInfo, os.Stdout, w4)
 
 	t.Logf("log1 = %p, log2 = %p, log3 = %p, log4 = %p", log1, log2, log3, log4)
 	log1.Info("info")
 	log2.Info("info")
 	log3.Info("info")
 	log4.Info("info")
+
+	if err := w2.Remove(); err != nil {
+		t.Errorf("remove w2 failed: %v", err)
+	}
+
+	if err := w3.Remove(); err != nil {
+		t.Errorf("remove w3 failed: %v", err)
+	}
+
+	if err := w4.Remove(); err != nil {
+		t.Errorf("remove w4 failed: %v", err)
+	}
 }
 
 func TestLogs(t *testing.T) {
@@ -41,15 +55,6 @@ func TestLogs(t *testing.T) {
 func TestMap(t *testing.T) {
 	log1 := logs.New(logs.LevelInfo)
 	log1.WithField("test", map[string]interface{}{"test": true}).Info("access")
-}
-
-func TestLogs_WithFunc(t *testing.T) {
-	log := logs.New(logs.LevelInfo).WithFunc("WithFunc")
-	err := errors.New("error")
-
-	log.Info("info")
-	log.Warn("warn")
-	log.WithError(err).Error("error")
 }
 
 func TestLogs_WithField(t *testing.T) {
