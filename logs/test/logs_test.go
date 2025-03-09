@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -87,4 +88,52 @@ func TestLogs_Fatal(t *testing.T) {
 		return
 	}
 	t.Fatalf("process ran with err %v, want exit status 1", err)
+}
+
+func TestLogs_Level(t *testing.T) {
+	a := NewAssert(t)
+	writer := NewMockWriter()
+	log := logs.New(logs.LevelWarn, writer)
+	log.Info("[LEVEL] info")
+	a.True(len(writer.ReadAndClean()) == 0)
+
+	log.WithField("user_id", "i'm user").
+		Warn("[LEVEL] with user id")
+
+	a.True(len(writer.ReadAndClean()) != 0)
+}
+
+type MockWriter struct {
+	buf bytes.Buffer
+}
+
+func NewMockWriter() *MockWriter {
+	return &MockWriter{}
+}
+
+func (w *MockWriter) Write(p []byte) (n int, err error) {
+	_, _ = os.Stdout.Write(p)
+	return w.buf.Write(p)
+}
+
+func (w *MockWriter) String() string {
+	return w.buf.String()
+}
+
+func (w *MockWriter) Remove() error {
+	return nil
+}
+
+func (w *MockWriter) Sync() error {
+	return nil
+}
+
+func (w *MockWriter) ReadAndClean() string {
+	s := w.String()
+	w.buf.Reset()
+	return s
+}
+
+func (w *MockWriter) Clean() {
+	w.buf.Reset()
 }

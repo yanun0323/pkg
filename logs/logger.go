@@ -6,6 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
+
+	"github.com/yanun0323/pkg/logs/internal"
 )
 
 type loggerNew slog.Logger
@@ -16,11 +18,11 @@ func New(level Level, outputs ...io.Writer) Logger {
 		out = outputs[0]
 	}
 
-	return (*loggerNew)(slog.New(newLoggerHandler(out, level)))
+	return (*loggerNew)(slog.New(internal.NewLoggerHandler(out, int8(level))))
 }
 
-func (l *loggerNew) clone() *loggerNew {
-	return (*loggerNew)((*slog.Logger)(l).With(slog.Any(cloneKey, struct{}{})))
+func (l loggerNew) clone() *loggerNew {
+	return (*loggerNew)((*slog.Logger)(&l))
 }
 
 func (l *loggerNew) Copy() Logger {

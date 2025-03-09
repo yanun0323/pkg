@@ -1,4 +1,4 @@
-package logs
+package internal
 
 import "fmt"
 
@@ -28,6 +28,6 @@ const (
 	colorBrightWhite
 )
 
-func colorize(s any, c int) string {
+func Colorize(s any, c int) string {
 	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }

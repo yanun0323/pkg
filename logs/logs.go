@@ -2,23 +2,13 @@ package logs
 
 import (
 	"context"
-	"sync/atomic"
-)
 
-var (
-	// defaultLogger is the default logger.
-	defaultLogger atomic.Value
-
-	defaultTimeFormat atomic.Value
-)
-
-const (
-	_defaultFormat = "2006/01/02 15:04:05"
+	"github.com/yanun0323/pkg/logs/internal"
 )
 
 func init() {
-	defaultLogger.Store(New(LevelInfo))
-	defaultTimeFormat.Store(_defaultFormat)
+	internal.DefaultLogger.Store(New(LevelInfo))
+	internal.DefaultTimeFormat.Store(internal.DefaultFormat)
 }
 
 // logKey is the key for the logger in the context.
@@ -36,10 +26,10 @@ func Get(ctx context.Context) Logger {
 
 // Default returns the default logger.
 func Default() Logger {
-	l, ok := defaultLogger.Load().(Logger)
+	l, ok := internal.DefaultLogger.Load().(Logger)
 	if !ok {
 		l = New(LevelInfo)
-		defaultLogger.Store(l)
+		internal.DefaultLogger.Store(l)
 	}
 
 	return l
@@ -48,14 +38,14 @@ func Default() Logger {
 // SetDefault sets the default logger.
 func SetDefault(logger Logger) {
 	if logger != nil {
-		defaultLogger.Store(logger)
+		internal.DefaultLogger.Store(logger)
 	}
 }
 
 // SetDefaultTimeFormat sets the default time format.
 func SetDefaultTimeFormat(format string) {
 	if len(format) != 0 {
-		defaultTimeFormat.Store(format)
+		internal.DefaultTimeFormat.Store(format)
 	}
 }
 
