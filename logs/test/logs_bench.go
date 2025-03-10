@@ -7,8 +7,6 @@ import (
 
 	"github.com/yanun0323/pkg/logs"
 	"github.com/yanun0323/pkg/logs/internal"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func BenchmarkLogger(b *testing.B) {
@@ -65,30 +63,30 @@ func BenchmarkSlog(b *testing.B) {
 	})
 }
 
-func BenchmarkZap(b *testing.B) {
-	writerZ := logs.FileWriter(".", "zap")
-	conf := zap.NewProductionEncoderConfig()
-	conf.EncodeLevel = zapcore.LowercaseColorLevelEncoder
-	zap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(conf),
-		os.Stdout,
-		zap.NewAtomicLevelAt(zap.InfoLevel),
-	)).With(zap.Any("key", "value")).Info("start test")
+// func BenchmarkZap(b *testing.B) {
+// 	writerZ := logs.FileWriter(".", "zap")
+// 	conf := zap.NewProductionEncoderConfig()
+// 	conf.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+// 	zap.New(zapcore.NewCore(
+// 		zapcore.NewConsoleEncoder(conf),
+// 		os.Stdout,
+// 		zap.NewAtomicLevelAt(zap.InfoLevel),
+// 	)).With(zap.Any("key", "value")).Info("start test")
 
-	l := zap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(conf),
-		writerZ,
-		zap.NewAtomicLevelAt(zap.InfoLevel),
-	))
-	b.RunParallel(func(p *testing.PB) {
-		for p.Next() {
-			l.With(zap.Any("key", "value")).Info("test")
-		}
-	})
+// 	l := zap.New(zapcore.NewCore(
+// 		zapcore.NewConsoleEncoder(conf),
+// 		writerZ,
+// 		zap.NewAtomicLevelAt(zap.InfoLevel),
+// 	))
+// 	b.RunParallel(func(p *testing.PB) {
+// 		for p.Next() {
+// 			l.With(zap.Any("key", "value")).Info("test")
+// 		}
+// 	})
 
-	b.Cleanup(func() {
-		if err := writerZ.Remove(); err != nil {
-			b.Fatalf("remove writerZ failed: %v", err)
-		}
-	})
-}
+// 	b.Cleanup(func() {
+// 		if err := writerZ.Remove(); err != nil {
+// 			b.Fatalf("remove writerZ failed: %v", err)
+// 		}
+// 	})
+// }

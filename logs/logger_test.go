@@ -6,26 +6,17 @@ import (
 	"os"
 	"sync"
 	"testing"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func TestVariousLogger(t *testing.T) {
 	l := New(LevelDebug, os.Stdout)
 	sl := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	zl := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionConfig().EncoderConfig),
-		os.Stdout,
-		zap.NewAtomicLevelAt(zap.InfoLevel),
-	))
 
 	t.Log("logger")
 	l.WithField("key", "value").Info("logger")
 	t.Log("slog")
 	sl.With("key", "value").Info("slog")
 	t.Log("zap")
-	zl.With(zap.Any("key", "value")).Info("zap")
 }
 
 func TestWithFieldLoop(t *testing.T) {
