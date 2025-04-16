@@ -36,7 +36,7 @@ func (h *loggerHandler) Enabled(ctx context.Context, level slog.Level) bool {
 func (h *loggerHandler) Handle(ctx context.Context, r slog.Record) error {
 	buf := new(bytes.Buffer)
 	// Time format
-	buf.WriteString(Colorize(r.Time.Format(DefaultTimeFormat.Load().(string)), colorBlack))
+	buf.WriteString(Colorize(r.Time.Format(GetDefaultTimeFormat()), colorBlack))
 	buf.WriteString(" ")
 
 	// Colorize level

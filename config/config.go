@@ -24,6 +24,10 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 		err error
 		log logs.Logger
 	)
+	if len(cfgName) == 0 {
+		return errors.New("empty config name")
+
+	}
 
 	if dump {
 		log = logs.New(logs.LevelInfo)
@@ -32,9 +36,10 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	sync.OnceFunc(func() {
 		dir, err = os.Getwd()
 		if err != nil {
-			err = errors.Wrap(err, "get wd")
+			err = errors.Errorf("get wd: %+v", err)
 			return
 		}
+
 		for _, p := range relativePaths {
 			path := filepath.Join(dir, p)
 			viper.AddConfigPath(path)
@@ -43,19 +48,16 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 			}
 		}
 		viper.AddConfigPath(".")
-		if len(cfgName) == 0 {
-			err = errors.New("empty config name")
-			return
-		}
 
+		viper.SupportedExts = []string{"yaml", "yml"}
 		viper.SetConfigName(cfgName)
-		viper.AutomaticEnv()
-		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 		viper.SetConfigType("yaml")
+		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+		viper.AutomaticEnv()
 
 		err = viper.ReadInConfig()
 		if err != nil {
-			err = errors.Wrap(err, "read in config")
+			err = errors.Errorf("read in config: %+v", err)
 			return
 		}
 		if dump {
@@ -65,6 +67,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	return err
 }
 
+// InitAndLoad initializes the config and unmarshals it into a struct.
 func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T, error) {
 	if err := Init(cfgName, dump, relativePaths...); err != nil {
 		return nil, err
@@ -72,7 +75,7 @@ func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T,
 
 	var cfg T
 	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, errors.Wrap(err, "unmarshal config")
+		return nil, errors.Errorf("unmarshal config: %+v", err)
 	}
 
 	return &cfg, nil

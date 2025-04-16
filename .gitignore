@@ -9,3 +9,4 @@
 *.log
 Makefile
 logs_dev
+*.db

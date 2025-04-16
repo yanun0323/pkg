@@ -6,10 +6,10 @@ import (
 	"github.com/yanun0323/pkg/logs/internal"
 )
 
-func init() {
-	internal.DefaultLogger.Store(New(LevelInfo))
-	internal.DefaultTimeFormat.Store(internal.DefaultFormat)
-}
+var (
+	// defaultLogger is the default logger.
+	defaultLogger = internal.NewValue(New(LevelInfo))
+)
 
 // logKey is the key for the logger in the context.
 type logKey struct{}
@@ -26,10 +26,10 @@ func Get(ctx context.Context) Logger {
 
 // Default returns the default logger.
 func Default() Logger {
-	l, ok := internal.DefaultLogger.Load().(Logger)
+	l, ok := defaultLogger.Load().(Logger)
 	if !ok {
 		l = New(LevelInfo)
-		internal.DefaultLogger.Store(l)
+		defaultLogger.Store(l)
 	}
 
 	return l
@@ -38,14 +38,14 @@ func Default() Logger {
 // SetDefault sets the default logger.
 func SetDefault(logger Logger) {
 	if logger != nil {
-		internal.DefaultLogger.Store(logger)
+		defaultLogger.Store(logger)
 	}
 }
 
 // SetDefaultTimeFormat sets the default time format.
 func SetDefaultTimeFormat(format string) {
 	if len(format) != 0 {
-		internal.DefaultTimeFormat.Store(format)
+		internal.SetDefaultTimeFormat(format)
 	}
 }
 

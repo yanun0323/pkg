@@ -26,6 +26,24 @@ func getAbsPath(root string, dirs ...string) string {
 //
 // If the object is not JSON serializable, it returns a string with the object's value.
 func Json(a any) string {
+	switch buf := a.(type) {
+	case []byte:
+		var data map[string]any
+		_ = json.Unmarshal(buf, &data)
+		if len(data) != 0 {
+			a = data
+		}
+	case string:
+		return Json([]byte(buf))
+	case []rune:
+		return Json([]byte(string(buf)))
+	case byte:
+		return Json([]byte{buf})
+	case rune:
+		return Json([]byte(string(buf)))
+	default:
+	}
+
 	s, err := json.MarshalIndent(a, "", "    ")
 	if err != nil {
 		return fmt.Sprintf("RAW(%v)", a)
