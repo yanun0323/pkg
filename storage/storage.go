@@ -10,48 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Local is a local storage for a single type
-type Local[T any] interface {
-	// Exists checks if the key exists in the storage
-	Exists(key string) (bool, error)
-
-	// Set sets the value for the key
-	Set(key string, value T) error
-
-	// Get retrieves the value associated with the specified key
-	//
-	// Returns ErrNotFound if the key doesn't exist in the storage
-	Get(key string) (T, error)
-
-	// Find retrieves the values associated with the specified keys
-	//
-	// Returns empty slice if any of the keys don't exist in the storage
-	Find(keys ...string) ([]T, error)
-
-	// Delete deletes the value for the key
-	Delete(key string) error
-
-	// Clear clears the storage
-	Clear() error
-
-	// Atomic executes a function within a transaction
-	//
-	// Note: Nested Atomic calls will use the same transaction
-	Atomic(fn func(tx Local[T]) error) error
-
-	// Close disconnects from the storage
-	//
-	// Note: Close will also commit any pending transaction
-	Close() error
-}
-
-type localStorage[T any] struct {
+type storage[T any] struct {
 	path string
 	db   *sql.DB
 	tx   *sql.Tx
 }
 
-func (l *localStorage[T]) driver() db {
+func (l *storage[T]) driver() db {
 	if l.tx != nil {
 		return l.tx
 	}
@@ -67,7 +32,7 @@ func New[T any](path string) (Local[T], error) {
 		return nil, err
 	}
 
-	return &localStorage[T]{
+	return &storage[T]{
 		path: path,
 		db:   db,
 	}, nil
@@ -78,7 +43,7 @@ func Delete(path string) error {
 	return os.Remove(path)
 }
 
-func (l *localStorage[T]) Exists(key string) (bool, error) {
+func (l *storage[T]) Exists(key string) (bool, error) {
 	var count int
 	err := l.driver().QueryRow("SELECT COUNT(*) FROM storage WHERE key = ?", key).Scan(&count)
 	if err != nil {
@@ -88,7 +53,7 @@ func (l *localStorage[T]) Exists(key string) (bool, error) {
 	return count != 0, nil
 }
 
-func (l *localStorage[T]) Set(key string, value T) error {
+func (l *storage[T]) Set(key string, value T) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(value); err != nil {
@@ -99,7 +64,7 @@ func (l *localStorage[T]) Set(key string, value T) error {
 	return wrapError("set value, err: %+v", err)
 }
 
-func (l *localStorage[T]) Get(key string) (T, error) {
+func (l *storage[T]) Get(key string) (T, error) {
 	var (
 		value    T
 		blobData []byte
@@ -121,7 +86,7 @@ func (l *localStorage[T]) Get(key string) (T, error) {
 	return value, nil
 }
 
-func (l *localStorage[T]) Find(keys ...string) ([]T, error) {
+func (l *storage[T]) Find(keys ...string) ([]T, error) {
 	rows, err := l.driver().Query("SELECT value FROM storage WHERE key IN (?)", keys)
 	if err != nil {
 		return nil, wrapError("find values, err: %+v", err)
@@ -151,17 +116,17 @@ func (l *localStorage[T]) Find(keys ...string) ([]T, error) {
 	return values, nil
 }
 
-func (l *localStorage[T]) Delete(key string) error {
+func (l *storage[T]) Delete(key string) error {
 	_, err := l.driver().Exec("DELETE FROM storage WHERE key = ?", key)
 	return wrapError("delete value, err: %+v", err)
 }
 
-func (l *localStorage[T]) Clear() error {
+func (l *storage[T]) Clear() error {
 	_, err := l.driver().Exec("DELETE FROM storage")
 	return wrapError("clear storage, err: %+v", err)
 }
 
-func (l *localStorage[T]) Close() error {
+func (l *storage[T]) Close() error {
 	if l.tx != nil {
 		if err := tryCommit(l.tx); err != nil {
 			tryRollback(l.tx)
@@ -179,7 +144,7 @@ func (l *localStorage[T]) Close() error {
 	return nil
 }
 
-func (l *localStorage[T]) Atomic(fn func(Local[T]) error) error {
+func (l *storage[T]) Atomic(fn func(Local[T]) error) error {
 	if l.tx != nil {
 		return fn(l)
 	}
@@ -190,7 +155,7 @@ func (l *localStorage[T]) Atomic(fn func(Local[T]) error) error {
 	}
 	defer tryRollback(tx)
 
-	if err := fn(&localStorage[T]{
+	if err := fn(&storage[T]{
 		path: l.path,
 		db:   l.db,
 		tx:   tx,
