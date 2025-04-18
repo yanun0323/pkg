@@ -13,14 +13,14 @@ func NewAssert[T comparable](t *testing.T) *assert[T] {
 	return &assert[T]{t: t}
 }
 
-func (a *assert[T]) Equal(got, want T) {
+func (a *assert[T]) Equal(want, got T) {
 	a.t.Helper()
 	if got != want {
 		a.t.Errorf("got %v, want %v", got, want)
 	}
 }
 
-func (a *assert[T]) NotEqual(got, want T) {
+func (a *assert[T]) NotEqual(want, got T) {
 	a.t.Helper()
 	if got == want {
 		a.t.Errorf("got %v, want %v", got, want)
@@ -69,14 +69,14 @@ func (a *assert[T]) False(got bool) {
 	}
 }
 
-func (a *assert[T]) ErrorIs(got error, want error) {
+func (a *assert[T]) ErrorIs(want error, got error) {
 	a.t.Helper()
 	if !errors.Is(got, want) {
 		a.t.Errorf("got %v, want %v", got, want)
 	}
 }
 
-func (a *assert[T]) ErrorIsNot(got error, want error) {
+func (a *assert[T]) ErrorIsNot(want error, got error) {
 	a.t.Helper()
 	if errors.Is(got, want) {
 		a.t.Errorf("got %v, want %v", got, want)
@@ -99,16 +99,16 @@ func (a *assert[T]) ErrorAsNot(got error) {
 	}
 }
 
-func AssertEqual[T comparable](t *testing.T, got, want T) {
+func AssertEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	assert := NewAssert[T](t)
-	assert.Equal(got, want)
+	assert.Equal(want, got)
 }
 
-func AssertNotEqual[T comparable](t *testing.T, got, want T) {
+func AssertNotEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	assert := NewAssert[T](t)
-	assert.NotEqual(got, want)
+	assert.NotEqual(want, got)
 }
 
 func AssertNil[T comparable](t *testing.T, got T) {
@@ -147,22 +147,26 @@ func AssertFalse(t *testing.T, got bool) {
 	assert.False(got)
 }
 
-func AssertErrorIs(t *testing.T, got error, want error) {
+func AssertErrorIs(t *testing.T, want error, got error) {
+	t.Helper()
 	assert := NewAssert[error](t)
-	assert.ErrorIs(got, want)
+	assert.ErrorIs(want, got)
 }
 
-func AssertErrorIsNot(t *testing.T, got error, want error) {
+func AssertErrorIsNot(t *testing.T, want error, got error) {
+	t.Helper()
 	assert := NewAssert[error](t)
-	assert.ErrorIsNot(got, want)
+	assert.ErrorIsNot(want, got)
 }
 
 func AssertErrorAs[T error](t *testing.T, got error) {
+	t.Helper()
 	assert := NewAssert[error](t)
 	assert.ErrorAs(got)
 }
 
 func AssertErrorAsNot[T error](t *testing.T, got error) {
+	t.Helper()
 	assert := NewAssert[error](t)
 	assert.ErrorAsNot(got)
 }

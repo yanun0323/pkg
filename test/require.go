@@ -13,14 +13,14 @@ func NewRequire[T comparable](t *testing.T) *require[T] {
 	return &require[T]{t: t}
 }
 
-func (a *require[T]) Equal(got, want T) {
+func (a *require[T]) Equal(want, got T) {
 	a.t.Helper()
 	if got != want {
 		a.t.Fatalf("got %v, want %v", got, want)
 	}
 }
 
-func (a *require[T]) NotEqual(got, want T) {
+func (a *require[T]) NotEqual(want, got T) {
 	a.t.Helper()
 	if got == want {
 		a.t.Fatalf("got %v, want %v", got, want)
@@ -69,14 +69,14 @@ func (a *require[T]) False(got bool) {
 	}
 }
 
-func (a *require[T]) ErrorIs(got error, want error) {
+func (a *require[T]) ErrorIs(want error, got error) {
 	a.t.Helper()
 	if !errors.Is(got, want) {
 		a.t.Fatalf("got %v, want %v", got, want)
 	}
 }
 
-func (a *require[T]) ErrorIsNot(got error, want error) {
+func (a *require[T]) ErrorIsNot(want error, got error) {
 	a.t.Helper()
 	if errors.Is(got, want) {
 		a.t.Fatalf("got %v, want %v", got, want)
@@ -99,13 +99,13 @@ func (a *require[T]) ErrorAsNot(got error) {
 	}
 }
 
-func RequireEqual[T comparable](t *testing.T, got, want T) {
+func RequireEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	require := NewRequire[T](t)
 	require.Equal(got, want)
 }
 
-func RequireNotEqual[T comparable](t *testing.T, got, want T) {
+func RequireNotEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	require := NewRequire[T](t)
 	require.NotEqual(got, want)
@@ -131,7 +131,7 @@ func RequireError(t *testing.T, got error) {
 
 func RequireNoError(t *testing.T, got error) {
 	t.Helper()
-	require := NewRequire[error](t)
+	require := NewRequire[any](t)
 	require.NoError(got)
 }
 
@@ -147,22 +147,26 @@ func RequireFalse(t *testing.T, got bool) {
 	require.False(got)
 }
 
-func RequireErrorIs(t *testing.T, got error, want error) {
+func RequireErrorIs(t *testing.T, want error, got error) {
+	t.Helper()
 	require := NewRequire[error](t)
-	require.ErrorIs(got, want)
+	require.ErrorIs(want, got)
 }
 
-func RequireErrorIsNot(t *testing.T, got error, want error) {
+func RequireErrorIsNot(t *testing.T, want error, got error) {
+	t.Helper()
 	require := NewRequire[error](t)
-	require.ErrorIsNot(got, want)
+	require.ErrorIsNot(want, got)
 }
 
 func RequireErrorAs[T error](t *testing.T, got error) {
+	t.Helper()
 	require := NewRequire[error](t)
 	require.ErrorAs(got)
 }
 
 func RequireErrorAsNot[T error](t *testing.T, got error) {
+	t.Helper()
 	require := NewRequire[error](t)
 	require.ErrorAsNot(got)
 }

@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/yanun0323/pkg/test"
 )
 
@@ -28,7 +29,7 @@ func TestNew(t *testing.T) {
 
 	{
 		db, err := New[bool]("./test_int.db")
-		test.RequireErrorIs(t, err, ErrTypeMismatch)
+		test.RequireErrorIs(t, ErrTypeMismatch, err)
 		test.RequireNil(t, db)
 	}
 }
@@ -48,9 +49,8 @@ func TestLocal_CURD(t *testing.T) {
 			test.RequireNoError(t, err)
 			test.RequireFalse(t, ok)
 
-			val, ok, err := db.Get("hello")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			val, err := db.Get("hello")
+			test.RequireErrorIs(t, ErrNotFound, err)
 			test.RequireEqual(t, 0, val)
 		}
 
@@ -60,14 +60,12 @@ func TestLocal_CURD(t *testing.T) {
 		}
 
 		{
-			val, ok, err := db.Get("hello")
+			val, err := db.Get("hello")
 			test.RequireNoError(t, err)
-			test.RequireTrue(t, ok)
 			test.RequireEqual(t, 1, val)
 
-			val, ok, err = db.Get("world")
+			val, err = db.Get("world")
 			test.RequireNoError(t, err)
-			test.RequireTrue(t, ok)
 			test.RequireEqual(t, 2, val)
 		}
 
@@ -78,9 +76,8 @@ func TestLocal_CURD(t *testing.T) {
 			test.RequireNoError(t, err)
 			test.RequireFalse(t, ok)
 
-			val, ok, err := db.Get("hello")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			val, err := db.Get("hello")
+			test.RequireErrorIs(t, err, ErrNotFound)
 			test.RequireEqual(t, 0, val)
 		}
 	}
@@ -116,9 +113,8 @@ func TestLocal_CURD(t *testing.T) {
 			test.RequireNoError(t, err)
 			test.RequireFalse(t, ok)
 
-			val, ok, err := db.Get("order")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			val, err := db.Get("order")
+			test.RequireErrorIs(t, err, ErrNotFound)
 			test.RequireNil(t, val)
 		}
 
@@ -127,9 +123,8 @@ func TestLocal_CURD(t *testing.T) {
 		}
 
 		{
-			val, ok, err := db.Get("order")
+			val, err := db.Get("order")
 			test.RequireNoError(t, err)
-			test.RequireTrue(t, ok)
 			test.RequireEqual(t, 1, val.ID)
 			test.RequireEqual(t, 1, len(val.RelativeOrder))
 			test.RequireEqual(t, 2, val.RelativeOrder[0].ID)
@@ -145,10 +140,98 @@ func TestLocal_CURD(t *testing.T) {
 			test.RequireNoError(t, err)
 			test.RequireFalse(t, ok)
 
-			val, ok, err := db.Get("order")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			val, err := db.Get("order")
+			test.RequireErrorIs(t, err, ErrNotFound)
 			test.RequireNil(t, val)
 		}
+	}
+}
+
+func TestLocal_Atomic(t *testing.T) {
+	defer func() {
+		test.RequireNoError(t, Delete("./test_atomic_int.db"))
+	}()
+
+	db, err := New[int]("./test_atomic_int.db")
+	test.RequireNoError(t, err)
+	test.RequireNotNil(t, db)
+
+	{
+		test.RequireNoError(t, db.Clear())
+
+		err := db.Atomic(func(tx Local[int]) error {
+			if err := tx.Set("hello", 1); err != nil {
+				return err
+			}
+
+			if err := tx.Set("world", 2); err != nil {
+				return err
+			}
+
+			return nil
+		})
+		test.RequireNoError(t, err)
+
+		ok, err := db.Exists("hello")
+		test.RequireNoError(t, err)
+		test.RequireTrue(t, ok)
+
+		ok, err = db.Exists("world")
+		test.RequireNoError(t, err)
+		test.RequireTrue(t, ok)
+	}
+
+	{
+		test.RequireNoError(t, db.Clear())
+
+		err := db.Atomic(func(tx Local[int]) error {
+			if err := tx.Set("hello", 1); err != nil {
+				return err
+			}
+
+			if err := tx.Set("world", 2); err != nil {
+				return err
+			}
+
+			return tx.Close()
+		})
+		test.RequireNoError(t, err)
+
+		db, err = New[int]("./test_atomic_int.db")
+		test.RequireNoError(t, err)
+		test.RequireNotNil(t, db)
+
+		ok, err := db.Exists("hello")
+		test.RequireNoError(t, err)
+		test.RequireTrue(t, ok)
+
+		ok, err = db.Exists("world")
+		test.RequireNoError(t, err)
+		test.RequireTrue(t, ok)
+	}
+
+	{
+		test.RequireNoError(t, db.Clear())
+
+		err := db.Atomic(func(tx Local[int]) error {
+			if err := tx.Set("not_hello", 1); err != nil {
+				return err
+			}
+
+			if err := tx.Set("not_world", 2); err != nil {
+				return err
+			}
+
+			return errors.New("rollback")
+		})
+		test.RequireError(t, err)
+
+		ok, err := db.Exists("not_hello")
+		test.RequireNoError(t, err)
+		test.RequireFalse(t, ok)
+
+		ok, err = db.Exists("not_world")
+		test.RequireNoError(t, err)
+		test.RequireFalse(t, ok)
 	}
 }
