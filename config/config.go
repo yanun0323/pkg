@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var once sync.Once
+
 /*
 Init initial the config from yaml file, and find file from paths relative to where the entry func.
 
@@ -33,7 +35,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 		log = logs.New(logs.LevelInfo)
 	}
 
-	sync.OnceFunc(func() {
+	once.Do(func() {
 		dir, err = os.Getwd()
 		if err != nil {
 			err = errors.Errorf("get wd: %+v", err)
@@ -63,7 +65,8 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 		if dump {
 			dumpConfig(log)
 		}
-	})()
+	})
+
 	return err
 }
 
