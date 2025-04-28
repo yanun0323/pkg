@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/gob"
 	"os"
@@ -43,9 +44,9 @@ func Delete(path string) error {
 	return os.Remove(path)
 }
 
-func (l *storage[T]) Exists(key string) (bool, error) {
+func (l *storage[T]) Exists(ctx context.Context, key string) (bool, error) {
 	var count int
-	err := l.driver().QueryRow("SELECT COUNT(*) FROM storage WHERE key = ?", key).Scan(&count)
+	err := l.driver().QueryRowContext(ctx, "SELECT COUNT(*) FROM storage WHERE key = ?", key).Scan(&count)
 	if err != nil {
 		return false, wrapError("exists, err: %+v", err)
 	}
@@ -53,25 +54,25 @@ func (l *storage[T]) Exists(key string) (bool, error) {
 	return count != 0, nil
 }
 
-func (l *storage[T]) Set(key string, value T) error {
+func (l *storage[T]) Set(ctx context.Context, key string, value T) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(value); err != nil {
 		return wrapError("encode value, err: %+v", err)
 	}
 
-	_, err := l.driver().Exec("INSERT INTO storage (key, value) VALUES (?, ?)", key, buf.Bytes())
+	_, err := l.driver().ExecContext(ctx, "INSERT INTO storage (key, value) VALUES (?, ?)", key, buf.Bytes())
 	return wrapError("set value, err: %+v", err)
 }
 
-func (l *storage[T]) Get(key string) (T, error) {
+func (l *storage[T]) Get(ctx context.Context, key string) (T, error) {
 	var (
 		value    T
 		blobData []byte
 		err      error
 	)
 
-	err = l.driver().QueryRow("SELECT value FROM storage WHERE key = ?", key).Scan(&blobData)
+	err = l.driver().QueryRowContext(ctx, "SELECT value FROM storage WHERE key = ?", key).Scan(&blobData)
 	if err != nil {
 		return value, wrapError("get value, err: %+v", err)
 	}
@@ -86,8 +87,8 @@ func (l *storage[T]) Get(key string) (T, error) {
 	return value, nil
 }
 
-func (l *storage[T]) Find(keys ...string) ([]T, error) {
-	rows, err := l.driver().Query("SELECT value FROM storage WHERE key IN (?)", keys)
+func (l *storage[T]) Find(ctx context.Context, keys ...string) ([]T, error) {
+	rows, err := l.driver().QueryContext(ctx, "SELECT value FROM storage WHERE key IN (?)", keys)
 	if err != nil {
 		return nil, wrapError("find values, err: %+v", err)
 	}
@@ -116,13 +117,13 @@ func (l *storage[T]) Find(keys ...string) ([]T, error) {
 	return values, nil
 }
 
-func (l *storage[T]) Delete(key string) error {
-	_, err := l.driver().Exec("DELETE FROM storage WHERE key = ?", key)
+func (l *storage[T]) Delete(ctx context.Context, key string) error {
+	_, err := l.driver().ExecContext(ctx, "DELETE FROM storage WHERE key = ?", key)
 	return wrapError("delete value, err: %+v", err)
 }
 
-func (l *storage[T]) Clear() error {
-	_, err := l.driver().Exec("DELETE FROM storage")
+func (l *storage[T]) Clear(ctx context.Context) error {
+	_, err := l.driver().ExecContext(ctx, "DELETE FROM storage")
 	return wrapError("clear storage, err: %+v", err)
 }
 
@@ -144,12 +145,12 @@ func (l *storage[T]) Close() error {
 	return nil
 }
 
-func (l *storage[T]) Atomic(fn func(Local[T]) error) error {
+func (l *storage[T]) Atomic(ctx context.Context, fn func(Local[T]) error) error {
 	if l.tx != nil {
 		return fn(l)
 	}
 
-	tx, err := l.db.Begin()
+	tx, err := l.db.BeginTx(ctx, nil)
 	if err != nil {
 		return wrapError("begin transaction, err: %+v", err)
 	}
