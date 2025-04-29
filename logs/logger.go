@@ -12,6 +12,9 @@ import (
 
 type loggerNew slog.Logger
 
+// New creates a new logger with the given level and outputs.
+//
+// If outputs is not provided, the logger will write to the os.Stdout.
 func New(level Level, outputs ...io.Writer) Logger {
 	var out io.Writer = os.Stdout
 	if len(outputs) != 0 {
