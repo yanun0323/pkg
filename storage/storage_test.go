@@ -150,6 +150,45 @@ func TestLocal_CURD(t *testing.T) {
 	}
 }
 
+func TestLocal_Find(t *testing.T) {
+	defer func() {
+		test.RequireNoError(t, Delete("./test_find_int.db"))
+	}()
+
+	ctx := context.Background()
+
+	db, err := New[int]("./test_find_int.db")
+	test.RequireNoError(t, err)
+	test.RequireNotNil(t, db)
+
+	{
+		test.RequireNoError(t, db.Clear(ctx))
+		test.RequireNoError(t, db.Set(ctx, "hello", 1))
+		test.RequireNoError(t, db.Set(ctx, "world", 2))
+
+		vals, err := db.Find(ctx)
+		test.RequireNoError(t, err)
+		test.RequireEqual(t, 2, len(vals))
+		test.RequireEqual(t, 1, vals[0])
+		test.RequireEqual(t, 2, vals[1])
+
+		vals, err = db.Find(ctx, "hello", "world")
+		test.RequireNoError(t, err)
+		test.RequireEqual(t, 2, len(vals))
+		test.RequireEqual(t, 1, vals[0])
+		test.RequireEqual(t, 2, vals[1])
+
+		vals, err = db.Find(ctx, "hello")
+		test.RequireNoError(t, err)
+		test.RequireEqual(t, 1, len(vals))
+		test.RequireEqual(t, 1, vals[0])
+
+		vals, err = db.Find(ctx, "not_exist")
+		test.RequireNoError(t, err)
+		test.RequireEqual(t, 0, len(vals))
+	}
+}
+
 func TestLocal_Atomic(t *testing.T) {
 	defer func() {
 		test.RequireNoError(t, Delete("./test_atomic_int.db"))

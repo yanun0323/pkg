@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"os"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -88,9 +89,28 @@ func (l *storage[T]) Get(ctx context.Context, key string) (T, error) {
 }
 
 func (l *storage[T]) Find(ctx context.Context, keys ...string) ([]T, error) {
-	rows, err := l.driver().QueryContext(ctx, "SELECT value FROM storage WHERE key IN (?)", keys)
-	if err != nil {
-		return nil, wrapError("find values, err: %+v", err)
+	var (
+		rows *sql.Rows
+		err  error
+	)
+
+	if len(keys) == 0 {
+		rows, err = l.driver().QueryContext(ctx, "SELECT value FROM storage")
+		if err != nil {
+			return nil, wrapError("find values, err: %+v", err)
+		}
+	} else {
+		args := make([]any, 0, len(keys))
+		for _, key := range keys {
+			args = append(args, key)
+		}
+
+		sql := "SELECT value FROM storage WHERE key IN (" + strings.Repeat("?, ", len(keys)-1) + "?)"
+
+		rows, err = l.driver().QueryContext(ctx, sql, args...)
+		if err != nil {
+			return nil, wrapError("find values, err: %+v", err)
+		}
 	}
 
 	values := make([]T, 0, len(keys))

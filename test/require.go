@@ -102,13 +102,13 @@ func (a *require[T]) ErrorAsNot(got error) {
 func RequireEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	require := NewRequire[T](t)
-	require.Equal(got, want)
+	require.Equal(want, got)
 }
 
 func RequireNotEqual[T comparable](t *testing.T, want, got T) {
 	t.Helper()
 	require := NewRequire[T](t)
-	require.NotEqual(got, want)
+	require.NotEqual(want, got)
 }
 
 func RequireNil[T comparable](t *testing.T, got T) {
