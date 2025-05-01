@@ -1,6 +1,6 @@
 module github.com/yanun0323/pkg
 
-go 1.21
+go 1.23
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.27
