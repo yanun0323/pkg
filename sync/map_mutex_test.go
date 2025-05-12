@@ -1,4 +1,4 @@
-package syncs
+package sync
 
 import "testing"
 
