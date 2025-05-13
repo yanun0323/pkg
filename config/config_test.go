@@ -26,4 +26,18 @@ func TestInitAndLoad(t *testing.T) {
 	test.RequireEqual(t, "hello", conf.Test)
 	test.RequireEqual(t, "", conf.TestSnake)
 	test.RequireEqual(t, "camel", conf.TestCamel)
+
+	conf, ok := store.Load().(*TestConfig)
+	test.RequireTrue(t, ok)
+	test.RequireEqual(t, "hello", viper.GetString("test"))
+	test.RequireEqual(t, "hello", conf.Test)
+	test.RequireEqual(t, "", conf.TestSnake)
+	test.RequireEqual(t, "camel", conf.TestCamel)
+
+	conf, err = InitAndLoad[TestConfig]("config_test", true)
+	test.RequireNoError(t, err)
+	test.RequireEqual(t, "hello", viper.GetString("test"))
+	test.RequireEqual(t, "hello", conf.Test)
+	test.RequireEqual(t, "", conf.TestSnake)
+	test.RequireEqual(t, "camel", conf.TestCamel)
 }

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/yanun0323/pkg/logs"
 
@@ -70,8 +71,26 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	return err
 }
 
+var (
+	store    atomic.Value
+	loadLock sync.Mutex
+)
+
 // InitAndLoad initializes the config and unmarshals it into a struct.
+//
+// The config will be cached in memory, so it will be loaded only once.
 func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T, error) {
+	if cfg, ok := store.Load().(*T); ok {
+		return cfg, nil
+	}
+
+	loadLock.Lock()
+	defer loadLock.Unlock()
+
+	if cfg, ok := store.Load().(*T); ok {
+		return cfg, nil
+	}
+
 	if err := Init(cfgName, dump, relativePaths...); err != nil {
 		return nil, err
 	}
@@ -80,6 +99,8 @@ func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T,
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, errors.Errorf("unmarshal config: %+v", err)
 	}
+
+	store.Store(&cfg)
 
 	return &cfg, nil
 }
