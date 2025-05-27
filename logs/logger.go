@@ -37,7 +37,7 @@ func (l *loggerNew) WithContext(ctx context.Context) Logger {
 }
 
 func (l *loggerNew) withField(key string, value any) *loggerNew {
-	return (*loggerNew)((*slog.Logger)(l).With(slog.Any(key, value)))
+	return (*loggerNew)((*slog.Logger)(l).With(key, value))
 }
 
 func (l *loggerNew) WithField(key string, value any) Logger {
