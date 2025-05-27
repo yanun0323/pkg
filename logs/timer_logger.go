@@ -20,6 +20,8 @@ type timerLoggerNew struct {
 // A timer logger is a logger that logs messages only when the interval has passed.
 //
 // If outputs is not provided, the logger will write to the os.Stdout.
+//
+// Deprecated: This package has been discontinued. Use github.com/yanun0323/logs instead.
 func NewTimerLogger(interval time.Duration, level Level, outputs ...io.Writer) Logger {
 	itv := interval.Milliseconds()
 	return &timerLoggerNew{

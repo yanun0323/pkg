@@ -25,6 +25,8 @@ func getAbsPath(root string, dirs ...string) string {
 // Json formats the given object to a JSON string.
 //
 // If the object is not JSON serializable, it returns a string with the object's value.
+//
+// Deprecated: This package has been discontinued. Use github.com/yanun0323/logs instead.
 func Json(a any) string {
 	switch buf := a.(type) {
 	case []byte:

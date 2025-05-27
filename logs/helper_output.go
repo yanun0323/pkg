@@ -15,6 +15,8 @@ type Writer interface {
 }
 
 // EmptyWriter is a writer that does nothing.
+//
+// Deprecated: This package has been discontinued. Use github.com/yanun0323/logs instead.
 var EmptyWriter Writer = &emptyWriter{}
 
 type emptyWriter struct{}
@@ -32,6 +34,8 @@ func (emptyWriter) Sync() error {
 }
 
 // FileWriter return an file output.
+//
+// Deprecated: This package has been discontinued. Use github.com/yanun0323/logs instead.
 func FileWriter(relativeDir, filename string) Writer {
 	if !strings.Contains(filename, ".") {
 		filename = fmt.Sprintf("%s.log", filename)
