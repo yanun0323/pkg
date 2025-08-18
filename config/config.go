@@ -8,7 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/yanun0323/pkg/logs"
+	"github.com/yanun0323/logs"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"

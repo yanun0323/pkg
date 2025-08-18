@@ -6,87 +6,87 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/yanun0323/pkg/test"
+	"github.com/yanun0323/pkg/tester"
 )
 
 func TestNew(t *testing.T) {
 	defer func() {
-		test.RequireNoError(t, Delete("./test_int.db"))
-		test.RequireNoError(t, Delete("./test_string.db"))
+		tester.RequireNoError(t, Delete("./test_int.db"))
+		tester.RequireNoError(t, Delete("./test_string.db"))
 	}()
 
 	{
 		db, err := New[int]("./test_int.db")
-		test.RequireNoError(t, err)
-		test.RequireNotNil(t, db)
+		tester.RequireNoError(t, err)
+		tester.RequireNotNil(t, db)
 	}
 
 	{
 		db, err := New[string]("./test_string.db")
-		test.RequireNoError(t, err)
-		test.RequireNotNil(t, db)
-		test.RequireNoError(t, db.Close())
+		tester.RequireNoError(t, err)
+		tester.RequireNotNil(t, db)
+		tester.RequireNoError(t, db.Close())
 	}
 
 	{
 		db, err := New[bool]("./test_int.db")
-		test.RequireErrorIs(t, ErrTypeMismatch, err)
-		test.RequireNil(t, db)
+		tester.RequireErrorIs(t, ErrTypeMismatch, err)
+		tester.RequireNil(t, db)
 	}
 }
 
 func TestLocal_CURD(t *testing.T) {
 	defer func() {
-		test.RequireNoError(t, Delete("./test_curd_int.db"))
+		tester.RequireNoError(t, Delete("./test_curd_int.db"))
 	}()
 
 	ctx := context.Background()
 
 	{
 		db, err := New[int]("./test_curd_int.db")
-		test.RequireNoError(t, err)
-		test.RequireNotNil(t, db)
+		tester.RequireNoError(t, err)
+		tester.RequireNotNil(t, db)
 
 		{
 			ok, err := db.Exists(ctx, "hello")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			tester.RequireNoError(t, err)
+			tester.RequireFalse(t, ok)
 
 			val, err := db.Get(ctx, "hello")
-			test.RequireErrorIs(t, ErrNotFound, err)
-			test.RequireEqual(t, 0, val)
+			tester.RequireErrorIs(t, ErrNotFound, err)
+			tester.RequireEqual(t, 0, val)
 		}
 
 		{
-			test.RequireNoError(t, db.Set(ctx, "hello", 1))
-			test.RequireNoError(t, db.Set(ctx, "world", 2))
+			tester.RequireNoError(t, db.Set(ctx, "hello", 1))
+			tester.RequireNoError(t, db.Set(ctx, "world", 2))
 		}
 
 		{
 			val, err := db.Get(ctx, "hello")
-			test.RequireNoError(t, err)
-			test.RequireEqual(t, 1, val)
+			tester.RequireNoError(t, err)
+			tester.RequireEqual(t, 1, val)
 
 			val, err = db.Get(ctx, "world")
-			test.RequireNoError(t, err)
-			test.RequireEqual(t, 2, val)
+			tester.RequireNoError(t, err)
+			tester.RequireEqual(t, 2, val)
 		}
 
 		{
-			test.RequireNoError(t, db.Delete(ctx, "hello"))
+			tester.RequireNoError(t, db.Delete(ctx, "hello"))
 
 			ok, err := db.Exists(ctx, "hello")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			tester.RequireNoError(t, err)
+			tester.RequireFalse(t, ok)
 
 			val, err := db.Get(ctx, "hello")
-			test.RequireErrorIs(t, err, ErrNotFound)
-			test.RequireEqual(t, 0, val)
+			tester.RequireErrorIs(t, err, ErrNotFound)
+			tester.RequireEqual(t, 0, val)
 		}
 	}
 
 	defer func() {
-		test.RequireNoError(t, Delete("./test_curd_object.db"))
+		tester.RequireNoError(t, Delete("./test_curd_object.db"))
 	}()
 
 	type Order struct {
@@ -108,100 +108,100 @@ func TestLocal_CURD(t *testing.T) {
 
 	{
 		db, err := New[*Order]("./test_curd_object.db")
-		test.RequireNoError(t, err)
-		test.RequireNotNil(t, db)
+		tester.RequireNoError(t, err)
+		tester.RequireNotNil(t, db)
 
 		{
 			ok, err := db.Exists(ctx, "order")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			tester.RequireNoError(t, err)
+			tester.RequireFalse(t, ok)
 
 			val, err := db.Get(ctx, "order")
-			test.RequireErrorIs(t, err, ErrNotFound)
-			test.RequireNil(t, val)
+			tester.RequireErrorIs(t, err, ErrNotFound)
+			tester.RequireNil(t, val)
 		}
 
 		{
-			test.RequireNoError(t, db.Set(ctx, "order", order))
+			tester.RequireNoError(t, db.Set(ctx, "order", order))
 		}
 
 		{
 			val, err := db.Get(ctx, "order")
-			test.RequireNoError(t, err)
-			test.RequireEqual(t, 1, val.ID)
-			test.RequireEqual(t, 1, len(val.RelativeOrder))
-			test.RequireEqual(t, 2, val.RelativeOrder[0].ID)
-			test.RequireEqual(t, 2, len(val.FilledAmount))
-			test.RequireEqual(t, 0, big.NewInt(100).Cmp(val.FilledAmount["BTC"]))
-			test.RequireEqual(t, 0, big.NewInt(200).Cmp(val.FilledAmount["USDT"]))
+			tester.RequireNoError(t, err)
+			tester.RequireEqual(t, 1, val.ID)
+			tester.RequireEqual(t, 1, len(val.RelativeOrder))
+			tester.RequireEqual(t, 2, val.RelativeOrder[0].ID)
+			tester.RequireEqual(t, 2, len(val.FilledAmount))
+			tester.RequireEqual(t, 0, big.NewInt(100).Cmp(val.FilledAmount["BTC"]))
+			tester.RequireEqual(t, 0, big.NewInt(200).Cmp(val.FilledAmount["USDT"]))
 		}
 
 		{
-			test.RequireNoError(t, db.Delete(ctx, "order"))
+			tester.RequireNoError(t, db.Delete(ctx, "order"))
 
 			ok, err := db.Exists(ctx, "order")
-			test.RequireNoError(t, err)
-			test.RequireFalse(t, ok)
+			tester.RequireNoError(t, err)
+			tester.RequireFalse(t, ok)
 
 			val, err := db.Get(ctx, "order")
-			test.RequireErrorIs(t, err, ErrNotFound)
-			test.RequireNil(t, val)
+			tester.RequireErrorIs(t, err, ErrNotFound)
+			tester.RequireNil(t, val)
 		}
 	}
 }
 
 func TestLocal_Find(t *testing.T) {
 	defer func() {
-		test.RequireNoError(t, Delete("./test_find_int.db"))
+		tester.RequireNoError(t, Delete("./test_find_int.db"))
 	}()
 
 	ctx := context.Background()
 
 	db, err := New[int]("./test_find_int.db")
-	test.RequireNoError(t, err)
-	test.RequireNotNil(t, db)
+	tester.RequireNoError(t, err)
+	tester.RequireNotNil(t, db)
 
 	{
-		test.RequireNoError(t, db.Clear(ctx))
-		test.RequireNoError(t, db.Set(ctx, "hello", 1))
-		test.RequireNoError(t, db.Set(ctx, "world", 2))
+		tester.RequireNoError(t, db.Clear(ctx))
+		tester.RequireNoError(t, db.Set(ctx, "hello", 1))
+		tester.RequireNoError(t, db.Set(ctx, "world", 2))
 
 		vals, err := db.Find(ctx)
-		test.RequireNoError(t, err)
-		test.RequireEqual(t, 2, len(vals))
-		test.RequireEqual(t, 1, vals[0])
-		test.RequireEqual(t, 2, vals[1])
+		tester.RequireNoError(t, err)
+		tester.RequireEqual(t, 2, len(vals))
+		tester.RequireEqual(t, 1, vals[0])
+		tester.RequireEqual(t, 2, vals[1])
 
 		vals, err = db.Find(ctx, "hello", "world")
-		test.RequireNoError(t, err)
-		test.RequireEqual(t, 2, len(vals))
-		test.RequireEqual(t, 1, vals[0])
-		test.RequireEqual(t, 2, vals[1])
+		tester.RequireNoError(t, err)
+		tester.RequireEqual(t, 2, len(vals))
+		tester.RequireEqual(t, 1, vals[0])
+		tester.RequireEqual(t, 2, vals[1])
 
 		vals, err = db.Find(ctx, "hello")
-		test.RequireNoError(t, err)
-		test.RequireEqual(t, 1, len(vals))
-		test.RequireEqual(t, 1, vals[0])
+		tester.RequireNoError(t, err)
+		tester.RequireEqual(t, 1, len(vals))
+		tester.RequireEqual(t, 1, vals[0])
 
 		vals, err = db.Find(ctx, "not_exist")
-		test.RequireNoError(t, err)
-		test.RequireEqual(t, 0, len(vals))
+		tester.RequireNoError(t, err)
+		tester.RequireEqual(t, 0, len(vals))
 	}
 }
 
 func TestLocal_Atomic(t *testing.T) {
 	defer func() {
-		test.RequireNoError(t, Delete("./test_atomic_int.db"))
+		tester.RequireNoError(t, Delete("./test_atomic_int.db"))
 	}()
 
 	ctx := context.Background()
 
 	db, err := New[int]("./test_atomic_int.db")
-	test.RequireNoError(t, err)
-	test.RequireNotNil(t, db)
+	tester.RequireNoError(t, err)
+	tester.RequireNotNil(t, db)
 
 	{
-		test.RequireNoError(t, db.Clear(ctx))
+		tester.RequireNoError(t, db.Clear(ctx))
 
 		err := db.Atomic(ctx, func(tx Local[int]) error {
 			if err := tx.Set(ctx, "hello", 1); err != nil {
@@ -214,19 +214,19 @@ func TestLocal_Atomic(t *testing.T) {
 
 			return nil
 		})
-		test.RequireNoError(t, err)
+		tester.RequireNoError(t, err)
 
 		ok, err := db.Exists(ctx, "hello")
-		test.RequireNoError(t, err)
-		test.RequireTrue(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireTrue(t, ok)
 
 		ok, err = db.Exists(ctx, "world")
-		test.RequireNoError(t, err)
-		test.RequireTrue(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireTrue(t, ok)
 	}
 
 	{
-		test.RequireNoError(t, db.Clear(ctx))
+		tester.RequireNoError(t, db.Clear(ctx))
 
 		err := db.Atomic(ctx, func(tx Local[int]) error {
 			if err := tx.Set(ctx, "hello", 1); err != nil {
@@ -239,23 +239,23 @@ func TestLocal_Atomic(t *testing.T) {
 
 			return tx.Close()
 		})
-		test.RequireNoError(t, err)
+		tester.RequireNoError(t, err)
 
 		db, err = New[int]("./test_atomic_int.db")
-		test.RequireNoError(t, err)
-		test.RequireNotNil(t, db)
+		tester.RequireNoError(t, err)
+		tester.RequireNotNil(t, db)
 
 		ok, err := db.Exists(ctx, "hello")
-		test.RequireNoError(t, err)
-		test.RequireTrue(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireTrue(t, ok)
 
 		ok, err = db.Exists(ctx, "world")
-		test.RequireNoError(t, err)
-		test.RequireTrue(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireTrue(t, ok)
 	}
 
 	{
-		test.RequireNoError(t, db.Clear(ctx))
+		tester.RequireNoError(t, db.Clear(ctx))
 
 		err := db.Atomic(ctx, func(tx Local[int]) error {
 			if err := tx.Set(ctx, "not_hello", 1); err != nil {
@@ -268,14 +268,14 @@ func TestLocal_Atomic(t *testing.T) {
 
 			return errors.New("rollback")
 		})
-		test.RequireError(t, err)
+		tester.RequireError(t, err)
 
 		ok, err := db.Exists(ctx, "not_hello")
-		test.RequireNoError(t, err)
-		test.RequireFalse(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireFalse(t, ok)
 
 		ok, err = db.Exists(ctx, "not_world")
-		test.RequireNoError(t, err)
-		test.RequireFalse(t, ok)
+		tester.RequireNoError(t, err)
+		tester.RequireFalse(t, ok)
 	}
 }
