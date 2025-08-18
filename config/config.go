@@ -1,14 +1,13 @@
 package config
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"github.com/yanun0323/logs"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -25,15 +24,10 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 	var (
 		dir string
 		err error
-		log logs.Logger
 	)
 	if len(cfgName) == 0 {
 		return errors.New("empty config name")
 
-	}
-
-	if dump {
-		log = logs.New(logs.LevelInfo)
 	}
 
 	once.Do(func() {
@@ -47,7 +41,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 			path := filepath.Join(dir, p)
 			viper.AddConfigPath(path)
 			if dump {
-				log.Info("config path: ", path)
+				log.Println("config path: ", path)
 			}
 		}
 		viper.AddConfigPath(".")
@@ -64,7 +58,7 @@ func Init(cfgName string, dump bool, relativePaths ...string) error {
 			return
 		}
 		if dump {
-			dumpConfig(log)
+			dumpConfig()
 		}
 	})
 
@@ -105,13 +99,13 @@ func InitAndLoad[T any](cfgName string, dump bool, relativePaths ...string) (*T,
 	return &cfg, nil
 }
 
-func dumpConfig(log logs.Logger) {
+func dumpConfig() {
 	keys := viper.AllKeys()
 	sort.Strings(keys)
 	for _, key := range keys {
 		// if strings.Contains(key, "password") || strings.Contains(key, "secret") || strings.Contains(key, "key") || strings.Contains(key, "pass") || strings.Contains(key, "pem") {
 		// 	continue
 		// }
-		log.Info(key, ": ", viper.Get(key))
+		log.Println(key, ": ", viper.Get(key))
 	}
 }
