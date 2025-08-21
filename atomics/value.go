@@ -1,4 +1,4 @@
-package atomic
+package atomics
 
 import "sync/atomic"
 

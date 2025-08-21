@@ -1,18 +1,4 @@
-package sync
-
-import "sync"
-
-type Mutex sync.Mutex
-
-type RWMutex sync.RWMutex
-
-type Once sync.Once
-
-type Cond sync.Cond
-
-type WaitGroup sync.WaitGroup
-
-type Locker sync.Locker
+package atomics
 
 // noCopy may be added to structs which must not be copied
 // after the first use.

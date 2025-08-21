@@ -1,20 +1,4 @@
-package atomic
-
-import "sync/atomic"
-
-type Bool atomic.Bool
-
-type Int32 atomic.Int32
-
-type Int64 atomic.Int64
-
-type Uint32 atomic.Uint32
-
-type Uint64 atomic.Uint64
-
-type Uintptr atomic.Uintptr
-
-type Pointer[T any] atomic.Pointer[T]
+package syncs
 
 // noCopy may be added to structs which must not be copied
 // after the first use.
