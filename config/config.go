@@ -9,8 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"github.com/yanun0323/errors"
 )
 
 var once sync.Once

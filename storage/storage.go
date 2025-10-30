@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pkg/errors"
+	"github.com/yanun0323/errors"
 )
 
 type storage[T any] struct {

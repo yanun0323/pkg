@@ -3,7 +3,7 @@ package storage
 import (
 	"database/sql"
 
-	"github.com/pkg/errors"
+	"github.com/yanun0323/errors"
 )
 
 var (

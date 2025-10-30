@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/yanun0323/errors"
 	"github.com/yanun0323/pkg/tester"
 )
 

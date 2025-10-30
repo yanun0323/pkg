@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/yanun0323/errors"
 )
 
 func openConnAndCheckType[T any](path string) (*sql.DB, error) {
