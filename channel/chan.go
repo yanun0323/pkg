@@ -29,8 +29,8 @@ func TryPush[T any](ch chan<- T, data T) {
 // It is safe to call this function even if the channel is already closed.
 func TryReceive[T any](ch chan T) (T, bool) {
 	select {
-	case data := <-ch:
-		return data, true
+	case data, ok := <-ch:
+		return data, ok
 	default:
 		return *new(T), false
 	}
