@@ -35,3 +35,13 @@ func TryReceive[T any](ch chan T) (T, bool) {
 		return *new(T), false
 	}
 }
+
+// IsClose returns whether the channel is closed or not.
+func IsClose[T any](ch chan T) bool {
+	select {
+	case _, open := <-ch:
+		return !open
+	default:
+		return false
+	}
+}
