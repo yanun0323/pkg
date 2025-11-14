@@ -14,6 +14,8 @@ import (
 
 var (
 	DefaultWaitingMessageTimeout = 15 * time.Second
+	DefaultSubscriberCap         = 1000
+	DefaultSubscriberMessageCap  = 1000
 )
 
 type Producer[T any] interface {
@@ -37,15 +39,15 @@ type Publisher[P Producer[T], T any] struct {
 	end   atomic.Bool
 }
 
-const (
-	_defaultSubscriberCount = 1000
-	_defaultSubscriberCap   = 1000
-)
+func NewPublisher[P Producer[T], T any](producer P, subscribeCap ...int) *Publisher[P, T] {
+	caps := DefaultSubscriberCap
+	if len(subscribeCap) != 0 && subscribeCap[0] > 0 {
+		caps = subscribeCap[0]
+	}
 
-func NewPublisher[P Producer[T], T any](producer P) *Publisher[P, T] {
 	return &Publisher[P, T]{
 		producer: producer,
-		subs:     make(map[SubscriberID]chan T, _defaultSubscriberCount),
+		subs:     make(map[SubscriberID]chan T, caps),
 	}
 }
 
@@ -102,8 +104,13 @@ func (pub *Publisher[P, T]) consumeMessage(ctx context.Context) {
 	}
 }
 
-func (pub *Publisher[P, T]) Subscribe(ctx context.Context, sub Subscriber[T]) (unsubscribe func()) {
-	ch := make(chan T, _defaultSubscriberCap)
+func (pub *Publisher[P, T]) Subscribe(ctx context.Context, sub Subscriber[T], messageCap ...int) (unsubscribe func()) {
+	caps := DefaultSubscriberMessageCap
+	if len(messageCap) != 0 && messageCap[0] > 0 {
+		caps = messageCap[0]
+	}
+
+	ch := make(chan T, caps)
 	pub.subsMu.Lock()
 	defer pub.subsMu.Unlock()
 

@@ -1,12 +1,14 @@
 module github.com/yanun0323/pkg
 
-go 1.23
+go 1.24.0
 
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sqlite3 v1.14.27
 	github.com/spf13/viper v1.13.0
+	github.com/yanun0323/colorize v1.3.0
 	github.com/yanun0323/errors v1.0.6
+	github.com/yanun0323/logs v1.4.12
 )
 
 require (

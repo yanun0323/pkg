@@ -3,21 +3,26 @@ package ws
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/yanun0323/colorize"
 	"github.com/yanun0323/errors"
+	"github.com/yanun0323/logs"
 	"github.com/yanun0323/pkg/channel"
 	"github.com/yanun0323/pkg/sys"
 )
 
 const (
-	_symbolRecv        string = "\x1b[32m⬇\x1b[0m"
-	_symbolWrite       string = "\x1b[33m⬆\x1b[0m"
-	_debugMessageLimit int    = 100
+	// _symbolRecv        string = "\x1b[32m⬇\x1b[0m"
+	// _symbolWrite       string = "\x1b[33m⬆\x1b[0m"
+	_debugMessageLimit int = 100
+)
+
+var (
+	_symbolRecv  string = colorize.String(colorize.ColorGreen, "⬇")
+	_symbolWrite string = colorize.String(colorize.ColorYellow, "⬆")
 )
 
 var (
@@ -32,7 +37,7 @@ type dialing struct {
 	writeMu sync.Mutex
 	done    chan struct{}
 	close   chan struct{}
-	logger  *slog.Logger
+	logger  logs.Logger
 }
 
 // dial creates
@@ -53,9 +58,9 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 		writeMu: sync.Mutex{},
 		done:    make(chan struct{}, 1),
 		close:   make(chan struct{}),
-		logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})).With(
-			slog.String("dialing", url),
-			slog.String("id", newLogID()),
+		logger: logs.Get(ctx).With(
+			"dialing", url,
+			"id", newLogID(),
 		),
 	}
 
@@ -70,7 +75,7 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 			default:
 				messageType, message, err := conn.ReadMessage()
 				if err != nil {
-					d.logger.Error(fmt.Sprintf("read message, err: %+v", err))
+					d.logger.Errorf("read message, err: %+v", err)
 					d.logger.Error("stop reading message")
 
 					return
@@ -80,13 +85,13 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 				switch mt {
 				case MessageTypeClose:
 					if Debug {
-						d.logger.Info(fmt.Sprintf("%s close message: %s", _symbolRecv, string(message)))
+						d.logger.Infof("%s close message: %s", _symbolRecv, string(message))
 					}
 					return
 				case MessageTypePong:
 					channel.TryPush(pong, struct{}{})
 					if Debug {
-						d.logger.Info(fmt.Sprintf("%s pong message", _symbolRecv))
+						d.logger.Infof("%s pong message", _symbolRecv)
 					}
 				default:
 					if Debug {
@@ -132,7 +137,7 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 					err := conn.WriteMessage(MessageTypePing.Int(), nil)
 					d.writeMu.Unlock()
 					if err != nil {
-						d.logger.Error(fmt.Sprintf("ping, err: %+v", err))
+						d.logger.Errorf("ping, err: %+v", err)
 						return
 					}
 
@@ -154,7 +159,7 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 		}
 
 		if err := conn.Close(); err != nil {
-			d.logger.Error(fmt.Sprintf("closing dialing, err: %+v", err))
+			d.logger.Errorf("closing dialing, err: %+v", err)
 		} else {
 			d.logger.Info("dialing closed")
 		}

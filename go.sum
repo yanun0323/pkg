@@ -178,8 +178,12 @@ github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKs
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/subosito/gotenv v1.4.1 h1:jyEFiXpy21Wm81FBN71l9VoMMV8H8jG+qIK3GCpY6Qs=
 github.com/subosito/gotenv v1.4.1/go.mod h1:ayKnFf/c6rvx/2iiLrJUk1e6plDbT3edrFNGqEflhK0=
+github.com/yanun0323/colorize v1.3.0 h1:mwXUarnvxGnnxONUMMxu2wST6uPm8ZWGU0UJodqis4U=
+github.com/yanun0323/colorize v1.3.0/go.mod h1:3351IQ+AacGcIdXBcMKdMEc3jfws2FZUZkX8xXu9kfI=
 github.com/yanun0323/errors v1.0.6 h1:28gAhFhcQ7ZicOOSGpK5RbY70ypKa6XBU4Qk+vEq1KU=
 github.com/yanun0323/errors v1.0.6/go.mod h1:W9otOXZqlRMiMKmw4znRBGrMTbmCFvJDkDVB0nxIbxo=
+github.com/yanun0323/logs v1.4.12 h1:9HMNcA+YRdFvkJwQ6dchQ2S2HZadJzHNL95UJSYtQwc=
+github.com/yanun0323/logs v1.4.12/go.mod h1:zeIdydCu4TfwDFEoRYIZ9SCjtJr1mMvh+LzySACZkg8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

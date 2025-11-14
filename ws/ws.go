@@ -3,14 +3,12 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log/slog"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/yanun0323/errors"
+	"github.com/yanun0323/logs"
 	"github.com/yanun0323/pkg/channel"
 	"github.com/yanun0323/pkg/sys"
 )
@@ -33,7 +31,7 @@ type WebSocket struct {
 
 	start  atomic.Bool
 	end    atomic.Bool
-	logger *slog.Logger
+	logger logs.Logger
 }
 
 func New(ctx context.Context, url string, ping ...bool) *WebSocket {
@@ -45,9 +43,9 @@ func New(ctx context.Context, url string, ping ...bool) *WebSocket {
 		shutdown:  make(chan struct{}),
 		reconnect: make(chan struct{}, 1),
 		message:   make(chan Message, _defaultMessageQueueCap),
-		logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})).With(
-			slog.String("websocket", newLogID()),
-			slog.String("url", url),
+		logger: logs.Get(ctx).With(
+			"websocket", newLogID(),
+			"url", url,
 		),
 	}
 
@@ -59,9 +57,9 @@ func ReadMessage[T any](msg Message) (T, bool) {
 	err := json.Unmarshal(msg.Data, &resp)
 	if err != nil {
 		if errors.As(err, json.UnmarshalTypeError{}) {
-			slog.Default().Debug(fmt.Sprintf("unmarshal message: mismatch json type, err: %+v", err))
+			logs.Debugf("unmarshal message: mismatch json type, err: %+v", err)
 		} else {
-			slog.Default().Debug(fmt.Sprintf("unmarshal message, err: %+v", err))
+			logs.Debugf("unmarshal message, err: %+v", err)
 		}
 	}
 
@@ -129,12 +127,12 @@ loop:
 			ws.conn.Store(d)
 			d, err := ws.dial()
 			if err != nil {
-				ws.logger.Error(fmt.Sprintf("ws connect to (%s), err: %+v", url, err))
+				ws.logger.Errorf("ws connect to (%s), err: %+v", url, err)
 				channel.TryPush(ws.reconnect, struct{}{})
 				continue
 			}
 
-			ws.logger.Info(fmt.Sprintf("ws connect to (%s) succeed, start subscribing...", url))
+			ws.logger.Info("ws connect to (%s) succeed, start subscribing...", url)
 
 			ws.subscribeLock.RLock()
 			subscribe := make([]func(*dialing) error, len(ws.subscribe))
@@ -143,7 +141,7 @@ loop:
 
 			for _, fn := range subscribe {
 				if err := fn(d); err != nil {
-					ws.logger.Error(fmt.Sprintf("subscribe topic, err: %+v", err))
+					ws.logger.Errorf("subscribe topic, err: %+v", err)
 					channel.TryPush(ws.reconnect, struct{}{})
 					continue loop
 				}
