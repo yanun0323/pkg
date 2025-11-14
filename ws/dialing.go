@@ -86,7 +86,7 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 				case MessageTypePong:
 					channel.TryPush(pong, struct{}{})
 					if Debug {
-						d.logger.Debug(fmt.Sprintf("%s pong message", _symbolRecv))
+						d.logger.Info(fmt.Sprintf("%s pong message", _symbolRecv))
 					}
 				default:
 					if Debug {
@@ -94,7 +94,7 @@ func dial(ctx context.Context, url string, ping ...bool) (*dialing, error) {
 						if len(msg) >= _debugMessageLimit {
 							msg = msg[:_debugMessageLimit] + "..."
 						}
-						d.logger.Debug(msg)
+						d.logger.Info(msg)
 					}
 				}
 
@@ -199,7 +199,7 @@ func (c *dialing) WriteJSON(v any) error {
 			msg = msg[:_debugMessageLimit] + "..."
 		}
 
-		c.logger.Debug(msg)
+		c.logger.Info(msg)
 	}
 
 	return nil
@@ -226,7 +226,7 @@ func (c *dialing) WriteRaw(messageType MessageType, data []byte) error {
 			msg = msg[:_debugMessageLimit] + "..."
 		}
 
-		c.logger.Debug(msg)
+		c.logger.Info(msg)
 	}
 
 	return nil
