@@ -17,6 +17,7 @@ var (
 )
 
 type Producer[T any] interface {
+	Start(context.Context)
 	Produce() <-chan T
 }
 
