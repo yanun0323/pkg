@@ -3,6 +3,7 @@ module github.com/yanun0323/pkg
 go 1.23
 
 require (
+	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sqlite3 v1.14.27
 	github.com/spf13/viper v1.13.0
 	github.com/yanun0323/errors v1.0.6
