@@ -69,6 +69,7 @@ func (pub *Publisher[P, T]) Start(ctx context.Context) {
 	pub.stop = cancel
 
 	go pub.consumeMessage(ctx)
+	pub.producer.Start(ctx)
 }
 
 func (pub *Publisher[P, T]) consumeMessage(ctx context.Context) {
