@@ -23,8 +23,8 @@ type Producer[T any] interface {
 type SubscriberID int64
 type Subscriber[T any] func(T)
 
-type Publisher[T any] struct {
-	producer Producer[T]
+type Publisher[P Producer[T], T any] struct {
+	producer P
 
 	subsMu     sync.RWMutex
 	subs       map[SubscriberID]chan T
@@ -41,21 +41,21 @@ const (
 	_defaultSubscriberCap   = 1000
 )
 
-func NewPublisher[T any](producer Producer[T]) *Publisher[T] {
-	return &Publisher[T]{
+func NewPublisher[P Producer[T], T any](producer P) *Publisher[P, T] {
+	return &Publisher[P, T]{
 		producer: producer,
 		subs:     make(map[SubscriberID]chan T, _defaultSubscriberCount),
 	}
 }
 
-func (pub *Publisher[T]) Len() int {
+func (pub *Publisher[P, T]) Len() int {
 	pub.subsMu.RLock()
 	defer pub.subsMu.RUnlock()
 
 	return len(pub.subs)
 }
 
-func (pub *Publisher[T]) Start(ctx context.Context) {
+func (pub *Publisher[P, T]) Start(ctx context.Context) {
 	if pub.start.Swap(true) {
 		return
 	}
@@ -66,7 +66,7 @@ func (pub *Publisher[T]) Start(ctx context.Context) {
 	go pub.consumeMessage(ctx)
 }
 
-func (pub *Publisher[T]) consumeMessage(ctx context.Context) {
+func (pub *Publisher[P, T]) consumeMessage(ctx context.Context) {
 	for {
 		select {
 		case <-sys.Shutdown():
@@ -96,7 +96,7 @@ func (pub *Publisher[T]) consumeMessage(ctx context.Context) {
 	}
 }
 
-func (pub *Publisher[T]) Subscribe(ctx context.Context, sub Subscriber[T]) (unsubscribe func()) {
+func (pub *Publisher[P, T]) Subscribe(ctx context.Context, sub Subscriber[T]) (unsubscribe func()) {
 	ch := make(chan T, _defaultSubscriberCap)
 	pub.subsMu.Lock()
 	defer pub.subsMu.Unlock()
@@ -138,7 +138,7 @@ func (pub *Publisher[T]) Subscribe(ctx context.Context, sub Subscriber[T]) (unsu
 	}
 }
 
-func SubscribeAndWait[T any, Result any](ctx context.Context, pub *Publisher[T], mapping func(T) (Result, bool), before func(context.Context) error, isWaitTarget func(context.Context, Result) bool, timeout ...time.Duration) (Result, error) {
+func SubscribeAndWait[P Producer[T], T any](ctx context.Context, pub *Publisher[P, T], send func(context.Context) error, isExpected func(context.Context, T) bool, timeout ...time.Duration) (T, error) {
 	done := make(chan error, 1)
 	defer channel.SafeClose(done)
 
@@ -153,21 +153,61 @@ func SubscribeAndWait[T any, Result any](ctx context.Context, pub *Publisher[T],
 	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
 	defer cancel()
 
-	var result Result
+	var result T
 	unsubscribe := pub.Subscribe(ctx, func(t T) {
-		r, ok := mapping(t)
+		if isExpected(ctx, t) {
+			result = t
+			channel.SafeClose(msg)
+		}
+	})
+	defer unsubscribe()
+
+	if err := send(ctx); err != nil {
+		return result, errors.Wrap(err, "execute before function")
+	}
+
+	select {
+	case <-sys.Shutdown():
+		done <- context.Canceled
+	case <-ctx.Done():
+		done <- ctx.Err()
+	case <-msg:
+		done <- nil
+	}
+
+	return result, errors.Wrap(<-done, "websocket message")
+}
+
+func SubscribeAndParseWaiting[P Producer[T], T, R any](ctx context.Context, pub *Publisher[P, T], send func(context.Context) error, parser func(T) (R, bool), isExpected func(context.Context, R) bool, timeout ...time.Duration) (R, error) {
+	done := make(chan error, 1)
+	defer channel.SafeClose(done)
+
+	msg := make(chan struct{})
+	defer channel.SafeClose(msg)
+
+	waitTimeout := DefaultWaitingMessageTimeout
+	if len(timeout) != 0 && timeout[0] > 0 {
+		waitTimeout = timeout[0]
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
+	defer cancel()
+
+	var result R
+	unsubscribe := pub.Subscribe(ctx, func(t T) {
+		r, ok := parser(t)
 		if !ok {
 			return
 		}
 
-		if isWaitTarget(ctx, r) {
+		if isExpected(ctx, r) {
 			result = r
 			channel.SafeClose(msg)
 		}
 	})
 	defer unsubscribe()
 
-	if err := before(ctx); err != nil {
+	if err := send(ctx); err != nil {
 		return result, errors.Wrap(err, "execute before function")
 	}
 
