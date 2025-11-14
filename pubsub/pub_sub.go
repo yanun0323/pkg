@@ -48,6 +48,10 @@ func NewPublisher[P Producer[T], T any](producer P) *Publisher[P, T] {
 	}
 }
 
+func (pub *Publisher[P, T]) Producer() P {
+	return pub.producer
+}
+
 func (pub *Publisher[P, T]) Len() int {
 	pub.subsMu.RLock()
 	defer pub.subsMu.RUnlock()
@@ -138,7 +142,7 @@ func (pub *Publisher[P, T]) Subscribe(ctx context.Context, sub Subscriber[T]) (u
 	}
 }
 
-func SubscribeAndWait[P Producer[T], T any](ctx context.Context, pub *Publisher[P, T], send func(context.Context) error, isExpected func(context.Context, T) bool, timeout ...time.Duration) (T, error) {
+func (pub *Publisher[P, T]) SubscribeAndWait(ctx context.Context, send func(context.Context, P) error, isExpected func(context.Context, T) bool, timeout ...time.Duration) error {
 	done := make(chan error, 1)
 	defer channel.SafeClose(done)
 
@@ -153,17 +157,15 @@ func SubscribeAndWait[P Producer[T], T any](ctx context.Context, pub *Publisher[
 	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
 	defer cancel()
 
-	var result T
 	unsubscribe := pub.Subscribe(ctx, func(t T) {
 		if isExpected(ctx, t) {
-			result = t
 			channel.SafeClose(msg)
 		}
 	})
 	defer unsubscribe()
 
-	if err := send(ctx); err != nil {
-		return result, errors.Wrap(err, "execute before function")
+	if err := send(ctx, pub.producer); err != nil {
+		return errors.Wrap(err, "execute before function")
 	}
 
 	select {
@@ -175,50 +177,5 @@ func SubscribeAndWait[P Producer[T], T any](ctx context.Context, pub *Publisher[
 		done <- nil
 	}
 
-	return result, errors.Wrap(<-done, "websocket message")
-}
-
-func SubscribeAndParseWaiting[P Producer[T], T, R any](ctx context.Context, pub *Publisher[P, T], send func(context.Context) error, parser func(T) (R, bool), isExpected func(context.Context, R) bool, timeout ...time.Duration) (R, error) {
-	done := make(chan error, 1)
-	defer channel.SafeClose(done)
-
-	msg := make(chan struct{})
-	defer channel.SafeClose(msg)
-
-	waitTimeout := DefaultWaitingMessageTimeout
-	if len(timeout) != 0 && timeout[0] > 0 {
-		waitTimeout = timeout[0]
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
-	defer cancel()
-
-	var result R
-	unsubscribe := pub.Subscribe(ctx, func(t T) {
-		r, ok := parser(t)
-		if !ok {
-			return
-		}
-
-		if isExpected(ctx, r) {
-			result = r
-			channel.SafeClose(msg)
-		}
-	})
-	defer unsubscribe()
-
-	if err := send(ctx); err != nil {
-		return result, errors.Wrap(err, "execute before function")
-	}
-
-	select {
-	case <-sys.Shutdown():
-		done <- context.Canceled
-	case <-ctx.Done():
-		done <- ctx.Err()
-	case <-msg:
-		done <- nil
-	}
-
-	return result, errors.Wrap(<-done, "websocket message")
+	return errors.Wrap(<-done, "websocket message")
 }
