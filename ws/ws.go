@@ -305,7 +305,9 @@ func (ws *WebSocket) WriteRaw(messageType MessageType, data []byte, subscribeFun
 	return d.WriteRaw(messageType, data)
 }
 
-func (ws *WebSocket) Produce() <-chan Message {
-	ch, _ := ws.Subscribe()
-	return ch
+func (ws *WebSocket) Len() int {
+	ws.subscribersLock.RLock()
+	defer ws.subscribersLock.RUnlock()
+
+	return len(ws.subscribers)
 }
