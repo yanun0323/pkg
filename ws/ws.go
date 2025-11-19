@@ -74,7 +74,9 @@ func ReadMessage[T any](msg Message) (T, bool) {
 	return resp, err == nil
 }
 
-const DefaultWaitingMessageTimeout = 15 * time.Second
+const (
+	DefaultTimeout = 15 * time.Second
+)
 
 func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 	if executor.Sender == nil || executor.Waiter == nil {
@@ -86,7 +88,7 @@ func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 
 	waitTimeout := executor.Timeout
 	if executor.Timeout <= 0 {
-		waitTimeout = DefaultWaitingMessageTimeout
+		waitTimeout = DefaultTimeout
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
@@ -219,7 +221,7 @@ func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 	go ws.observeReconnection(ctx, ws.url)
 
 	channel.TryPush(ws.reconnect, struct{}{})
-	timeout := time.After(5 * time.Second)
+	timeout := time.After(DefaultTimeout)
 	for {
 		select {
 		case <-sys.Shutdown():
@@ -301,4 +303,9 @@ func (ws *WebSocket) WriteRaw(messageType MessageType, data []byte, subscribeFun
 	}
 
 	return d.WriteRaw(messageType, data)
+}
+
+func (ws *WebSocket) Produce() <-chan Message {
+	ch, _ := ws.Subscribe()
+	return ch
 }
