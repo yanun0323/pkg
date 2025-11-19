@@ -22,16 +22,24 @@ type WebSocket struct {
 	url  string
 
 	dial      func() (*dialing, error)
-	message   chan Message
 	shutdown  chan struct{}
 	reconnect chan struct{}
 
-	subscribe     []func(*dialing) error
-	subscribeLock sync.RWMutex
+	registers []Sidecar
+
+	subscribers     map[uint64]chan Message
+	subscribersLock sync.RWMutex
+	nextID          atomic.Uint64
 
 	start  atomic.Bool
 	end    atomic.Bool
 	logger logs.Logger
+}
+
+type Sidecar struct {
+	Sender  func(context.Context, *WebSocket) error
+	Waiter  func(context.Context, Message) bool
+	Timeout time.Duration
 }
 
 func New(ctx context.Context, url string, ping ...bool) *WebSocket {
@@ -40,9 +48,9 @@ func New(ctx context.Context, url string, ping ...bool) *WebSocket {
 		dial: func() (*dialing, error) {
 			return dial(ctx, url, ping...)
 		},
-		shutdown:  make(chan struct{}),
-		reconnect: make(chan struct{}, 1),
-		message:   make(chan Message, _defaultMessageQueueCap),
+		shutdown:    make(chan struct{}),
+		reconnect:   make(chan struct{}, 1),
+		subscribers: make(map[uint64]chan Message),
 		logger: logs.Get(ctx).With(
 			"websocket", newLogID(),
 			"url", url,
@@ -68,46 +76,53 @@ func ReadMessage[T any](msg Message) (T, bool) {
 
 const DefaultWaitingMessageTimeout = 15 * time.Second
 
-func SendAndWait[T any](ctx context.Context, ws *WebSocket, send func(context.Context, *WebSocket) error, isWaitTarget func(context.Context, T) bool, timeout ...time.Duration) (T, error) {
+func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
+	if executor.Sender == nil || executor.Waiter == nil {
+		return errors.New("invalid hook, require sender and waiter")
+	}
+
 	done := make(chan error, 1)
 	defer channel.SafeClose(done)
 
-	waitTimeout := DefaultWaitingMessageTimeout
-	if len(timeout) != 0 && timeout[0] > 0 {
-		waitTimeout = timeout[0]
+	waitTimeout := executor.Timeout
+	if executor.Timeout <= 0 {
+		waitTimeout = DefaultWaitingMessageTimeout
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
 	defer cancel()
 
-	var resp T
+	msgCh, unsubscribe := ws.Subscribe()
+	defer unsubscribe()
+
 	go func() {
 		for {
 			select {
-			case msg := <-ws.Message():
-				resp, ok := ReadMessage[T](msg)
+			case msg, ok := <-msgCh:
 				if !ok {
-					continue
+					channel.TryPush(done, error(errors.New("message channel closed")))
+					return
 				}
 
-				if isWaitTarget(ctx, resp) {
-					done <- nil
+				if executor.Waiter(ctx, msg) {
+					channel.TryPush(done, nil)
+					return
 				}
 			case <-ctx.Done():
-				done <- ctx.Err()
+				channel.TryPush(done, ctx.Err())
 				return
 			case <-sys.Shutdown():
-				done <- context.Canceled
+				channel.TryPush(done, context.Canceled)
 				return
 			}
 		}
 	}()
 
-	if err := send(ctx, ws); err != nil {
-		return resp, errors.Wrap(err, "send func error before waiting")
+	if err := executor.Sender(ctx, ws); err != nil {
+		return errors.Wrap(err, "send func error before waiting")
 	}
 
-	return resp, errors.Wrap(<-done, "websocket message")
+	return errors.Wrap(<-done, "websocket message")
 }
 
 func (ws *WebSocket) observeReconnection(ctx context.Context, url string) {
@@ -134,14 +149,9 @@ loop:
 
 			ws.logger.Info("ws connect to (%s) succeed, start subscribing...", url)
 
-			ws.subscribeLock.RLock()
-			subscribe := make([]func(*dialing) error, len(ws.subscribe))
-			copy(subscribe, ws.subscribe)
-			ws.subscribeLock.RUnlock()
-
-			for _, fn := range subscribe {
-				if err := fn(d); err != nil {
-					ws.logger.Errorf("subscribe topic, err: %+v", err)
+			for _, register := range ws.registers {
+				if err := ws.SendAndWait(ctx, register); err != nil {
+					ws.logger.Errorf("register, err: %+v", err)
 					channel.TryPush(ws.reconnect, struct{}{})
 					continue loop
 				}
@@ -165,7 +175,7 @@ loop:
 						return
 					case msg, ok := <-d.Message():
 						if ok {
-							ws.message <- msg
+							ws.broadcast(msg)
 						} else {
 							channel.TryPush(ws.reconnect, struct{}{})
 							return
@@ -173,6 +183,19 @@ loop:
 					}
 				}
 			}()
+		}
+	}
+}
+
+func (ws *WebSocket) broadcast(msg Message) {
+	ws.subscribersLock.RLock()
+	defer ws.subscribersLock.RUnlock()
+
+	for _, ch := range ws.subscribers {
+		select {
+		case ch <- msg:
+		default:
+			ws.logger.Warnf("broadcast message dropped for a subscriber, channel is full")
 		}
 	}
 }
@@ -186,10 +209,12 @@ func (ws *WebSocket) getConn() *dialing {
 	return nil
 }
 
-func (ws *WebSocket) Start(ctx context.Context) {
+func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 	if ws.start.Swap(true) {
 		return
 	}
+
+	ws.registers = registers
 
 	go ws.observeReconnection(ctx, ws.url)
 
@@ -217,13 +242,20 @@ func (ws *WebSocket) Close() {
 	}
 
 	channel.SafeClose(ws.shutdown)
+
+	ws.subscribersLock.Lock()
+	defer ws.subscribersLock.Unlock()
+	for id, ch := range ws.subscribers {
+		channel.SafeClose(ch)
+		delete(ws.subscribers, id)
+	}
 }
 
 func (ws *WebSocket) IsClose() bool {
 	return channel.IsClose(ws.shutdown)
 }
 
-func (ws *WebSocket) ReconnectAndSubscribe() {
+func (ws *WebSocket) Reconnect() {
 	d, ok := ws.conn.Load().(*dialing)
 	if ok && d != nil {
 		d.Close()
@@ -232,23 +264,28 @@ func (ws *WebSocket) ReconnectAndSubscribe() {
 	}
 }
 
-func (ws *WebSocket) Message() <-chan Message {
-	return ws.message
-}
+func (ws *WebSocket) Subscribe() (<-chan Message, func()) {
+	ws.subscribersLock.Lock()
+	defer ws.subscribersLock.Unlock()
 
-func (ws *WebSocket) Produce() <-chan Message {
-	return ws.message
+	id := ws.nextID.Add(1)
+	ch := make(chan Message, _defaultMessageQueueCap)
+	ws.subscribers[id] = ch
+
+	unsubscribe := func() {
+		ws.subscribersLock.Lock()
+		defer ws.subscribersLock.Unlock()
+
+		if ch, ok := ws.subscribers[id]; ok {
+			channel.SafeClose(ch)
+			delete(ws.subscribers, id)
+		}
+	}
+
+	return ch, unsubscribe
 }
 
 func (ws *WebSocket) WriteJSON(v any, subscribeFunc ...bool) error {
-	if len(subscribeFunc) != 0 && subscribeFunc[0] {
-		ws.subscribeLock.Lock()
-		ws.subscribe = append(ws.subscribe, func(d *dialing) error {
-			return d.WriteJSON(v)
-		})
-		ws.subscribeLock.Unlock()
-	}
-
 	d := ws.getConn()
 	if d == nil {
 		return errors.Wrap(ErrConnectionClose, "nil ws connection")
@@ -258,14 +295,6 @@ func (ws *WebSocket) WriteJSON(v any, subscribeFunc ...bool) error {
 }
 
 func (ws *WebSocket) WriteRaw(messageType MessageType, data []byte, subscribeFunc ...bool) error {
-	if len(subscribeFunc) != 0 && subscribeFunc[0] {
-		ws.subscribeLock.Lock()
-		ws.subscribe = append(ws.subscribe, func(d *dialing) error {
-			return d.WriteRaw(messageType, data)
-		})
-		ws.subscribeLock.Unlock()
-	}
-
 	d := ws.getConn()
 	if d == nil {
 		return errors.Wrap(ErrConnectionClose, "nil ws connection")
