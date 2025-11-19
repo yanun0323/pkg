@@ -38,7 +38,7 @@ type WebSocket struct {
 
 type Sidecar struct {
 	Sender  func(context.Context, *WebSocket) error
-	Waiter  func(context.Context, Message) bool
+	Waiter  func(context.Context, Message) (isExpected bool, failure error)
 	Timeout time.Duration
 }
 
@@ -106,7 +106,13 @@ func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 					return
 				}
 
-				if executor.Waiter(ctx, msg) {
+				ok, err := executor.Waiter(ctx, msg)
+				if err != nil {
+					channel.TryPush(done, error(errors.Wrap(err, "waiting for message")))
+					return
+				}
+
+				if ok {
 					channel.TryPush(done, nil)
 					return
 				}
