@@ -205,10 +205,8 @@ func (ws *WebSocket) broadcast(msg Message) {
 	defer ws.subscribersLock.RUnlock()
 
 	for _, ch := range ws.subscribers {
-		select {
-		case ch <- msg:
-		default:
-			ws.logger.Warnf("broadcast message dropped for a subscriber, channel is full")
+		if !channel.TryPush(ch, msg) {
+			ws.logger.Warnf("broadcast message dropped for a subscriber, channel is full or closed")
 		}
 	}
 }
