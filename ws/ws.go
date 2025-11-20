@@ -230,9 +230,9 @@ func (ws *WebSocket) getConn() *dialing {
 	return nil
 }
 
-func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
+func (ws *WebSocket) Start(_ctx context.Context, registers ...Sidecar) error {
 	if ws.start.Swap(true) {
-		return
+		return nil
 	}
 
 	ws.registers = registers
@@ -240,17 +240,22 @@ func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 	start := make(chan struct{})
 	defer channel.SafeClose(start)
 
-	go ws.observeReconnection(ctx, ws.url, start)
+	go ws.observeReconnection(_ctx, ws.url, start)
 
 	channel.TryPush(ws.reconnect, struct{}{})
-	timeout := time.After(DefaultTimeout)
+	ctx, cancel := context.WithTimeout(_ctx, DefaultTimeout)
+	defer cancel()
+
 	select {
 	case <-sys.Shutdown():
-	case <-timeout:
-		ws.logger.Warn("start ws timeout")
+		return errors.Wrap(context.Canceled)
+	case <-ctx.Done():
+		return errors.Wrap(ctx.Err(), "timeout")
 	case <-start:
 		ws.logger.Info("start ws succeed")
 	}
+
+	return nil
 }
 
 func (ws *WebSocket) Close() {
