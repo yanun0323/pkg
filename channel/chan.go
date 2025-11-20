@@ -1,6 +1,8 @@
 package channel
 
-import "sync"
+import (
+	"sync"
+)
 
 var safeCloseMu sync.Mutex
 
@@ -21,10 +23,16 @@ func SafeClose[T any](ch chan T) {
 	}
 }
 
-// TryPush pushes a value to a channel. If the channel is full, it will skip the push without blocking.
+// TryPush pushes a value to a channel. If the channel is full or closed, it will skip the push without blocking.
 //
 // It is safe to call this function even if the channel is already closed.
 func TryPush[T any](ch chan<- T, data T) bool {
+	defer func() {
+		if err, _ := recover().(error); err != nil {
+			println(err.Error())
+		}
+	}()
+
 	select {
 	case ch <- data:
 		return true
