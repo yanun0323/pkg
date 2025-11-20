@@ -244,16 +244,12 @@ func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 
 	channel.TryPush(ws.reconnect, struct{}{})
 	timeout := time.After(DefaultTimeout)
-	for {
-		select {
-		case <-sys.Shutdown():
-			return
-		case <-timeout:
-			ws.logger.Warn("start ws timeout")
-			return
-		case <-start:
-			ws.logger.Info("start ws succeed")
-		}
+	select {
+	case <-sys.Shutdown():
+	case <-timeout:
+		ws.logger.Warn("start ws timeout")
+	case <-start:
+		ws.logger.Info("start ws succeed")
 	}
 }
 
