@@ -155,7 +155,7 @@ loop:
 				continue
 			}
 
-			ws.logger.Info("ws connect to (%s) succeed, start subscribing...", url)
+			ws.logger.Infof("ws connect to (%s) succeed, start subscribing...", url)
 
 			for _, register := range ws.registers {
 				if err := ws.SendAndWait(ctx, register); err != nil {
