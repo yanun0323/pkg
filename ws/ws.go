@@ -130,7 +130,11 @@ func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 		return errors.Wrap(err, "send func error before waiting")
 	}
 
-	return errors.Wrap(<-done, "websocket message")
+	if err := <-done; err != nil {
+		return errors.Wrap(err, "unexpected result")
+	}
+
+	return nil
 }
 
 func (ws *WebSocket) clearConnection() {

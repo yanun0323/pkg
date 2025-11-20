@@ -186,5 +186,9 @@ func (pub *Publisher[P, T]) SubscribeAndWait(ctx context.Context, send func(cont
 		done <- nil
 	}
 
-	return errors.Wrap(<-done, "websocket message")
+	if err := <-done; err != nil {
+		return errors.Wrap(err, "unexpected result")
+	}
+
+	return nil
 }
