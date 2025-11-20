@@ -142,7 +142,9 @@ func (ws *WebSocket) clearConnection() {
 	ws.conn.Store(d)
 }
 
-func (ws *WebSocket) observeReconnection(ctx context.Context, url string) {
+func (ws *WebSocket) observeReconnection(ctx context.Context, url string, start chan struct{}) {
+	var once sync.Once
+
 loop:
 	for {
 		time.Sleep(100 * time.Millisecond)
@@ -162,20 +164,6 @@ loop:
 				channel.TryPush(ws.reconnect, struct{}{})
 				continue
 			}
-
-			ws.logger.Infof("ws connect to (%s) succeed, start subscribing...", url)
-			ws.conn.Store(d)
-
-			for _, register := range ws.registers {
-				if err := ws.SendAndWait(ctx, register); err != nil {
-					ws.clearConnection()
-					ws.logger.Errorf("register, err: %+v", err)
-					channel.TryPush(ws.reconnect, struct{}{})
-					continue loop
-				}
-			}
-
-			ws.logger.Info("ws subscribing succeed, connection available")
 
 			go func() {
 				defer d.Close()
@@ -200,6 +188,24 @@ loop:
 					}
 				}
 			}()
+
+			ws.logger.Infof("ws connect to (%s) succeed, start subscribing...", url)
+			ws.conn.Store(d)
+
+			for _, register := range ws.registers {
+				if err := ws.SendAndWait(ctx, register); err != nil {
+					ws.clearConnection()
+					ws.logger.Errorf("register, err: %+v", err)
+					channel.TryPush(ws.reconnect, struct{}{})
+					continue loop
+				}
+			}
+
+			once.Do(func() {
+				channel.SafeClose(start)
+			})
+
+			ws.logger.Info("ws subscribing succeed, connection available")
 		}
 	}
 }
@@ -231,7 +237,10 @@ func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 
 	ws.registers = registers
 
-	go ws.observeReconnection(ctx, ws.url)
+	start := make(chan struct{})
+	defer channel.SafeClose(start)
+
+	go ws.observeReconnection(ctx, ws.url, start)
 
 	channel.TryPush(ws.reconnect, struct{}{})
 	timeout := time.After(DefaultTimeout)
@@ -242,11 +251,8 @@ func (ws *WebSocket) Start(ctx context.Context, registers ...Sidecar) {
 		case <-timeout:
 			ws.logger.Warn("start ws timeout")
 			return
-		default:
-			if ws.getConn() != nil {
-				ws.logger.Info("start ws succeed")
-				return
-			}
+		case <-start:
+			ws.logger.Info("start ws succeed")
 		}
 	}
 }
