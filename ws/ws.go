@@ -133,6 +133,11 @@ func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 	return errors.Wrap(<-done, "websocket message")
 }
 
+func (ws *WebSocket) clearConnection() {
+	var d *dialing
+	ws.conn.Store(d)
+}
+
 func (ws *WebSocket) observeReconnection(ctx context.Context, url string) {
 loop:
 	for {
@@ -146,8 +151,7 @@ loop:
 			return
 		case <-ws.reconnect:
 			ws.logger.Warn("reconnecting...")
-			var d *dialing
-			ws.conn.Store(d)
+			ws.clearConnection()
 			d, err := ws.dial()
 			if err != nil {
 				ws.logger.Errorf("ws connect to (%s), err: %+v", url, err)
@@ -156,9 +160,11 @@ loop:
 			}
 
 			ws.logger.Infof("ws connect to (%s) succeed, start subscribing...", url)
+			ws.conn.Store(d)
 
 			for _, register := range ws.registers {
 				if err := ws.SendAndWait(ctx, register); err != nil {
+					ws.clearConnection()
 					ws.logger.Errorf("register, err: %+v", err)
 					channel.TryPush(ws.reconnect, struct{}{})
 					continue loop
@@ -166,7 +172,6 @@ loop:
 			}
 
 			ws.logger.Info("ws subscribing succeed, connection available")
-			ws.conn.Store(d)
 
 			go func() {
 				defer d.Close()
