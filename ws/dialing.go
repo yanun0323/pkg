@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	// _symbolRecv        string = "\x1b[32m⬇\x1b[0m"
-	// _symbolWrite       string = "\x1b[33m⬆\x1b[0m"
 	_debugMessageLimit int = 100
 )
 
@@ -26,8 +24,15 @@ var (
 )
 
 var (
-	Debug              = false
-	ErrNilInstance     = errors.New("nil instance")
+	// Debug is the switch of debug log.
+	//
+	// Set debug true to print the debug log of receiving / writing message.
+	Debug = false
+
+	// ErrNilInstance represents the error of dial
+	ErrNilInstance = errors.New("nil instance")
+
+	// ErrConnectionClose represents the error of trying to send / read data from a closed connection.
 	ErrConnectionClose = errors.New("connection closed")
 )
 

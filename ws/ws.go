@@ -17,6 +17,11 @@ const (
 	_defaultMessageQueueCap int = 1_000
 )
 
+// WebSocket holds a websocket connection and treat it like a producer.
+//
+// It handles all clients as consumer, publish message data from websocket to all consumers.
+//
+// It also handles reconnection automatically.
 type WebSocket struct {
 	conn atomic.Value // *dialing
 	url  string
@@ -42,6 +47,10 @@ type Sidecar struct {
 	Timeout time.Duration
 }
 
+// New creates a new websocket connection without connecting to the websocket.
+//
+// Args:
+//   - ping: whether or not spawn a background goroutine to send ping message automatically.
 func New(ctx context.Context, url string, ping ...bool) *WebSocket {
 	ws := &WebSocket{
 		url: url,
@@ -60,6 +69,7 @@ func New(ctx context.Context, url string, ping ...bool) *WebSocket {
 	return ws
 }
 
+// ReadMessage parses the message with provided types
 func ReadMessage[T any](msg Message) (T, bool) {
 	var resp T
 	err := json.Unmarshal(msg.Data, &resp)
@@ -75,9 +85,13 @@ func ReadMessage[T any](msg Message) (T, bool) {
 }
 
 const (
-	DefaultTimeout = 15 * time.Second
+	// DefaultStartTimeout is the default timeout for WebSocket.Start(...)
+	DefaultStartTimeout = 15 * time.Second
+	// DefaultWaitTimeout is the default timeout for WebSocket.SendAndWait(...)
+	DefaultWaitTimeout = 15 * time.Second
 )
 
+// SendAndWait using a Sidecar to send a message and wait for particular response
 func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 	if executor.Sender == nil || executor.Waiter == nil {
 		return errors.New("invalid hook, require sender and waiter")
@@ -88,7 +102,7 @@ func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
 
 	waitTimeout := executor.Timeout
 	if executor.Timeout <= 0 {
-		waitTimeout = DefaultTimeout
+		waitTimeout = DefaultWaitTimeout
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, waitTimeout)
@@ -230,6 +244,10 @@ func (ws *WebSocket) getConn() *dialing {
 	return nil
 }
 
+// Start starts connecting to the websocket.
+//
+// Args:
+//   - register: represents operations which must be invoked after every websocket connecting/reconnecting
 func (ws *WebSocket) Start(_ctx context.Context, registers ...Sidecar) error {
 	if ws.start.Swap(true) {
 		return nil
@@ -243,7 +261,7 @@ func (ws *WebSocket) Start(_ctx context.Context, registers ...Sidecar) error {
 	go ws.observeReconnection(_ctx, ws.url, start)
 
 	channel.TryPush(ws.reconnect, struct{}{})
-	ctx, cancel := context.WithTimeout(_ctx, DefaultTimeout)
+	ctx, cancel := context.WithTimeout(_ctx, DefaultStartTimeout)
 	defer cancel()
 
 	select {
@@ -258,6 +276,7 @@ func (ws *WebSocket) Start(_ctx context.Context, registers ...Sidecar) error {
 	return nil
 }
 
+// Close closes the websocket connection
 func (ws *WebSocket) Close() {
 	if ws.end.Swap(true) {
 		return
@@ -273,10 +292,12 @@ func (ws *WebSocket) Close() {
 	}
 }
 
+// IsClose returns whether the websocket is closed or not
 func (ws *WebSocket) IsClose() bool {
 	return channel.IsClose(ws.shutdown)
 }
 
+// Reconnect tries to reconnect the websocket
 func (ws *WebSocket) Reconnect() {
 	d, ok := ws.conn.Load().(*dialing)
 	if ok && d != nil {
@@ -286,6 +307,7 @@ func (ws *WebSocket) Reconnect() {
 	}
 }
 
+// Subscribe subscribes the websocket message producer
 func (ws *WebSocket) Subscribe() (<-chan Message, func()) {
 	ws.subscribersLock.Lock()
 	defer ws.subscribersLock.Unlock()
@@ -307,7 +329,8 @@ func (ws *WebSocket) Subscribe() (<-chan Message, func()) {
 	return ch, unsubscribe
 }
 
-func (ws *WebSocket) WriteJSON(v any, subscribeFunc ...bool) error {
+// WriteJSON writes a JSON message to the websocket connection
+func (ws *WebSocket) WriteJSON(v any) error {
 	d := ws.getConn()
 	if d == nil {
 		return errors.Wrap(ErrConnectionClose, "nil ws connection")
@@ -316,6 +339,7 @@ func (ws *WebSocket) WriteJSON(v any, subscribeFunc ...bool) error {
 	return d.WriteJSON(v)
 }
 
+// WriteRaw writes a raw message to the websocket connection
 func (ws *WebSocket) WriteRaw(messageType MessageType, data []byte, subscribeFunc ...bool) error {
 	d := ws.getConn()
 	if d == nil {
@@ -325,6 +349,7 @@ func (ws *WebSocket) WriteRaw(messageType MessageType, data []byte, subscribeFun
 	return d.WriteRaw(messageType, data)
 }
 
+// Len returns the subscribers number of websocket connection
 func (ws *WebSocket) Len() int {
 	ws.subscribersLock.RLock()
 	defer ws.subscribersLock.RUnlock()

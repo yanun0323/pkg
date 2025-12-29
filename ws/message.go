@@ -8,6 +8,7 @@ import (
 	"github.com/yanun0323/errors"
 )
 
+// MessageType represents the message type of websocket
 type MessageType int
 
 const (
@@ -39,6 +40,7 @@ func (mt MessageType) String() string {
 	}
 }
 
+// Message is a struct store the message data and type
 type Message struct {
 	Type MessageType
 	Data []byte
