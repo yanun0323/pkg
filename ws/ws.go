@@ -15,7 +15,34 @@ import (
 
 const (
 	_defaultMessageQueueCap int = 1_000
+	_defaultBackoffMin          = 100 * time.Millisecond
+	_defaultBackoffMax          = 30 * time.Second
+	_defaultBackoffFactor       = 2.0
 )
+
+// Option defines websocket settings for New.
+type Option struct {
+	// Ping enables an automatic ping goroutine to keep the connection alive.
+	Ping    bool
+	Backoff BackoffOption
+}
+
+// BackoffOption defines reconnection backoff behavior.
+type BackoffOption struct {
+	// Min is the minimum delay before a reconnect attempt.
+	Min time.Duration
+	// Max is the maximum delay before a reconnect attempt.
+	Max time.Duration
+	// Factor is the multiplier for exponential backoff growth.
+	Factor float64
+}
+
+type backoffState struct {
+	min     time.Duration
+	max     time.Duration
+	factor  float64
+	current time.Duration
+}
 
 // WebSocket holds a websocket connection and treat it like a producer.
 //
@@ -38,28 +65,37 @@ type WebSocket struct {
 
 	start  atomic.Bool
 	end    atomic.Bool
+	option Option
 	logger logs.Logger
 }
 
+// Sidecar defines hooks and timing for SendAndWait execution.
 type Sidecar struct {
-	Sender  func(context.Context, *WebSocket) error
-	Waiter  func(context.Context, Message) (isExpected bool, failure error)
+	// Sender emits a request through the websocket.
+	Sender func(context.Context, *WebSocket) error
+	// Waiter inspects incoming messages and returns true when the expected response arrives.
+	Waiter func(context.Context, Message) (isExpected bool, failure error)
+	// Timeout limits how long SendAndWait waits for an expected response.
 	Timeout time.Duration
 }
 
 // New creates a new websocket connection without connecting to the websocket.
-//
-// Args:
-//   - ping: whether or not spawn a background goroutine to send ping message automatically.
-func New(ctx context.Context, url string, ping ...bool) *WebSocket {
+func New(ctx context.Context, url string, opts ...Option) *WebSocket {
+	option := Option{}
+	if len(opts) > 0 {
+		option = opts[0]
+	}
+	option = normalizeOption(option)
+
 	ws := &WebSocket{
 		url: url,
 		dial: func() (*dialing, error) {
-			return dial(ctx, url, ping...)
+			return dial(ctx, url, option.Ping)
 		},
 		shutdown:    make(chan struct{}),
 		reconnect:   make(chan struct{}, 1),
 		subscribers: make(map[uint64]chan Message),
+		option:      option,
 		logger: logs.Get(ctx).With(
 			"websocket", newLogID(),
 			"url", url,
@@ -156,12 +192,87 @@ func (ws *WebSocket) clearConnection() {
 	ws.conn.Store(d)
 }
 
+func normalizeOption(option Option) Option {
+	option.Backoff = normalizeBackoff(option.Backoff)
+	return option
+}
+
+func normalizeBackoff(option BackoffOption) BackoffOption {
+	if option.Min <= 0 {
+		option.Min = _defaultBackoffMin
+	}
+	if option.Max <= 0 {
+		option.Max = _defaultBackoffMax
+	}
+	if option.Max < option.Min {
+		option.Max = option.Min
+	}
+	if option.Factor <= 1 {
+		option.Factor = _defaultBackoffFactor
+	}
+
+	return option
+}
+
+func newBackoffState(option BackoffOption) backoffState {
+	option = normalizeBackoff(option)
+	return backoffState{
+		min:    option.Min,
+		max:    option.Max,
+		factor: option.Factor,
+	}
+}
+
+func (b *backoffState) Next() time.Duration {
+	if b.min <= 0 {
+		return 0
+	}
+	if b.current <= 0 {
+		b.current = b.min
+		return b.current
+	}
+
+	next := time.Duration(float64(b.current) * b.factor)
+	if next < b.min {
+		next = b.min
+	}
+	if b.max > 0 && next > b.max {
+		next = b.max
+	}
+	b.current = next
+	return b.current
+}
+
+func (b *backoffState) Reset() {
+	b.current = 0
+}
+
+func (ws *WebSocket) waitBackoff(ctx context.Context, delay time.Duration) bool {
+	if delay <= 0 {
+		return true
+	}
+
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-sys.Shutdown():
+		return false
+	case <-ctx.Done():
+		return false
+	case <-ws.shutdown:
+		return false
+	case <-timer.C:
+		return true
+	}
+}
+
 func (ws *WebSocket) observeReconnection(ctx context.Context, url string, start chan struct{}) {
 	var once sync.Once
+	backoff := newBackoffState(ws.option.Backoff)
 
 loop:
 	for {
-		time.Sleep(100 * time.Millisecond)
 		select {
 		case <-sys.Shutdown():
 			return
@@ -170,6 +281,12 @@ loop:
 		case <-ws.shutdown:
 			return
 		case <-ws.reconnect:
+			dur := backoff.Next()
+			ws.logger.Warnf("reconnecting in %s...", dur)
+			if !ws.waitBackoff(ctx, dur) {
+				return
+			}
+
 			ws.logger.Warn("reconnecting...")
 			ws.clearConnection()
 			d, err := ws.dial()
@@ -219,6 +336,7 @@ loop:
 				channel.SafeClose(start)
 			})
 
+			backoff.Reset()
 			ws.logger.Info("ws subscribing succeed, connection available")
 		}
 	}
