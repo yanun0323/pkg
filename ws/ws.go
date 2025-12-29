@@ -23,7 +23,8 @@ const (
 // Option defines websocket settings for New.
 type Option struct {
 	// Ping enables an automatic ping goroutine to keep the connection alive.
-	Ping    bool
+	Ping bool
+	// BackoffOption defines reconnection backoff behavior.
 	Backoff BackoffOption
 }
 
@@ -57,7 +58,8 @@ type WebSocket struct {
 	shutdown  chan struct{}
 	reconnect chan struct{}
 
-	registers []Sidecar
+	registersLock sync.RWMutex
+	registers     []Sidecar
 
 	subscribers     map[uint64]chan Message
 	subscribersLock sync.RWMutex
@@ -128,9 +130,15 @@ const (
 )
 
 // SendAndWait using a Sidecar to send a message and wait for particular response
-func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar) error {
+func (ws *WebSocket) SendAndWait(ctx context.Context, executor Sidecar, appendIntoRegister ...bool) error {
 	if executor.Sender == nil || executor.Waiter == nil {
 		return errors.New("invalid hook, require sender and waiter")
+	}
+
+	if len(appendIntoRegister) != 0 && appendIntoRegister[0] {
+		ws.registersLock.Lock()
+		ws.registers = append(ws.registers, executor)
+		ws.registersLock.Unlock()
 	}
 
 	done := make(chan error, 1)
@@ -323,6 +331,7 @@ loop:
 			ws.logger.Infof("ws connect to (%s) succeed, start subscribing...", url)
 			ws.conn.Store(d)
 
+			ws.registersLock.RLock()
 			for _, register := range ws.registers {
 				if err := ws.SendAndWait(ctx, register); err != nil {
 					ws.clearConnection()
@@ -331,6 +340,7 @@ loop:
 					continue loop
 				}
 			}
+			ws.registersLock.RUnlock()
 
 			once.Do(func() {
 				channel.SafeClose(start)
